@@ -1,7 +1,7 @@
 {
   "name": "project-activity-wall",
   "version": "1.0.0",
-  "description": "Project Activity Wall, Track your GitHub development activity",
+  "description": "Project Activity Wall - Track your GitHub development activity",
   "type": "module",
   "scripts": {
     "dev": "vite",

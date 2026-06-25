@@ -22,7 +22,7 @@ export default function Sidebar({ username, avatarUrl, onLogout, activeSection, 
   return (
     <div className={`flex flex-col h-screen bg-bg-sidebar border-r border-border transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'}`}>
       <div className="flex items-center gap-3 px-4 py-5 border-b border-border">
-        <img src="/logo.svg" alt="PAW" className="w-8 h-8 flex-shrink-0" />
+        <img src="/logo.png" alt="PAW" className="w-8 h-8 flex-shrink-0" />
         {!collapsed && (
           <div className="flex items-center gap-1.5">
             <span className="text-accent font-bold text-sm tracking-wider">PROJECT</span>
@@ -78,7 +78,7 @@ export default function Sidebar({ username, avatarUrl, onLogout, activeSection, 
 
         {!collapsed && (
           <div className="flex items-center gap-3 px-3 py-2 mt-2">
-            <img src={avatarUrl || '/logo.svg'} alt={username} className="w-8 h-8 rounded-full border border-border" />
+            <img src={avatarUrl || '/logo.png'} alt={username} className="w-8 h-8 rounded-full border border-border" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-text-primary truncate">{username}</p>
               <p className="text-xs text-text-muted">Developer</p>
@@ -87,7 +87,7 @@ export default function Sidebar({ username, avatarUrl, onLogout, activeSection, 
         )}
         {collapsed && (
           <div className="flex justify-center py-2">
-            <img src={avatarUrl || '/logo.svg'} alt={username} className="w-8 h-8 rounded-full border border-border" />
+            <img src={avatarUrl || '/logo.png'} alt={username} className="w-8 h-8 rounded-full border border-border" />
           </div>
         )}
       </div>

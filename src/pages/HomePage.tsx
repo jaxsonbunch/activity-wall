@@ -54,7 +54,7 @@ export default function HomePage({ onUsernameSubmit }: HomePageProps) {
       <div className="relative z-10 flex flex-col items-center gap-8 px-4 max-w-md w-full">
         {/* Logo */}
         <div className="flex flex-col items-center gap-3">
-          <img src="/logo.svg" alt="PAW" className="w-16 h-16" />
+          <img src="/logo.png" alt="PAW" className="w-16 h-16" />
           <div className="flex items-center gap-2">
             <Zap className="w-5 h-5 text-accent" />
             <span className="text-accent font-bold text-lg tracking-wider">PROJECT ACTIVITY</span>

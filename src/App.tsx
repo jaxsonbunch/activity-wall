@@ -3,7 +3,7 @@ import HomePage from './pages/HomePage'
 import DashboardPage from './pages/DashboardPage'
 
 export default function App() {
-  const [username, setUsername] = useState<string | null>(null)
+  const [username, setUsername] = useState<string | null>(() => localStorage.getItem('paw_username'))
 
   const handleUsernameSubmit = (name: string) => {
     setUsername(name)

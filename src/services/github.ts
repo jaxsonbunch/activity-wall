@@ -44,6 +44,12 @@ export async function getUserFromToken(token: string): Promise<GitHubUser> {
 }
 
 export async function getUser(username: string, token?: string): Promise<GitHubUser> {
+  if (token) {
+    const authenticatedUser = await getUserFromToken(token)
+    if (authenticatedUser.login.toLowerCase() === username.toLowerCase()) {
+      return authenticatedUser
+    }
+  }
   const response = await githubFetch(`/users/${username}`, token)
   return response.json()
 }

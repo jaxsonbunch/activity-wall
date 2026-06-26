@@ -457,6 +457,7 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
   const [displaySection, setDisplaySection] = useState<Section>('overview')
   const [phase, setPhase] = useState<'entering' | 'settled' | 'leaving'>('entering')
   const [timeRange, setTimeRange] = useState<TimeRange>('weekly')
+  const [displayTimeRange, setDisplayTimeRange] = useState<TimeRange>('weekly')
   const contentRef = useRef<HTMLDivElement>(null)
 
   const loadData = async () => {
@@ -491,16 +492,14 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
     }
   }, [loading, error])
 
-  const lastTimeRangeRef = useRef(timeRange)
-
   useEffect(() => {
     const sectionChanged = activeSection !== displaySection
-    const rangeChanged = timeRange !== lastTimeRangeRef.current
+    const rangeChanged = timeRange !== displayTimeRange
     if (!sectionChanged && !rangeChanged) return
     setPhase('leaving')
     const timeout = setTimeout(() => {
       setDisplaySection(activeSection)
-      lastTimeRangeRef.current = timeRange
+      setDisplayTimeRange(timeRange)
       setPhase('entering')
       requestAnimationFrame(() => setPhase('settled'))
       if (contentRef.current) {
@@ -508,68 +507,73 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
       }
     }, 180)
     return () => clearTimeout(timeout)
-  }, [activeSection, displaySection, timeRange])
+  }, [activeSection, displaySection, timeRange, displayTimeRange])
+
+  const rangedContributions = useMemo(
+    () => contributions.filter((day) => isWithinRange(day.date, displayTimeRange)),
+    [contributions, displayTimeRange],
+  )
 
   const heatmapWeeks = useMemo(() => {
     const weeks: ContributionDay[][] = []
-    for (let i = 0; i < contributions.length; i += 7) weeks.push(contributions.slice(i, i + 7))
+    for (let i = 0; i < rangedContributions.length; i += 7) weeks.push(rangedContributions.slice(i, i + 7))
     return weeks
-  }, [contributions])
+  }, [rangedContributions])
 
   const heatmapMonthMarks = useMemo(() => {
-    if (contributions.length === 0) return []
-    const first = new Date(contributions[0].date)
-    const last = new Date(contributions[contributions.length - 1].date)
-    const mid = new Date(contributions[Math.floor(contributions.length / 2)].date)
+    if (rangedContributions.length === 0) return []
+    const first = new Date(rangedContributions[0].date)
+    const last = new Date(rangedContributions[rangedContributions.length - 1].date)
+    const mid = new Date(rangedContributions[Math.floor(rangedContributions.length / 2)].date)
     return [monthLabel(first), monthLabel(mid), monthLabel(last)]
-  }, [contributions])
+  }, [rangedContributions])
 
   const busiestDay = useMemo(() => {
-    if (contributions.length === 0) return null
-    return contributions.reduce((best, day) => (day.count > best.count ? day : best), contributions[0])
-  }, [contributions])
+    if (rangedContributions.length === 0) return null
+    return rangedContributions.reduce((best, day) => (day.count > best.count ? day : best), rangedContributions[0])
+  }, [rangedContributions])
 
   const rangedFeed = useMemo(
-    () => activityFeed.filter((item) => isWithinRange(item.timestamp, timeRange)),
-    [activityFeed, timeRange],
+    () => activityFeed.filter((item) => isWithinRange(item.timestamp, displayTimeRange)),
+    [activityFeed, displayTimeRange],
   )
 
   const rangedProjects = useMemo(() => {
-    if (timeRange === 'all') return projects
+    if (displayTimeRange === 'all') return projects
     const activeNames = new Set(rangedFeed.map((item) => item.repo))
     const filtered = projects.filter((project) => activeNames.has(project.name))
     return filtered.length > 0 ? filtered : projects
-  }, [projects, rangedFeed, timeRange])
+  }, [projects, rangedFeed, displayTimeRange])
 
   const rangedTopRepos = useMemo(() => {
-    if (timeRange === 'all') return topRepos
+    if (displayTimeRange === 'all') return topRepos
     const activeNames = new Set(rangedFeed.map((item) => item.repo))
     const filtered = topRepos.filter((repo) => activeNames.has(repo.full_name) || activeNames.has(repo.name))
     return filtered.length > 0 ? filtered : topRepos
-  }, [topRepos, rangedFeed, timeRange])
+  }, [topRepos, rangedFeed, displayTimeRange])
 
   const priorRangedFeed = useMemo(
-    () => activityFeed.filter((item) => isWithinPriorRange(item.timestamp, timeRange)),
-    [activityFeed, timeRange],
+    () => activityFeed.filter((item) => isWithinPriorRange(item.timestamp, displayTimeRange)),
+    [activityFeed, displayTimeRange],
   )
 
   const isCommitLike = (item: ActivityFeedItem) => item.type === 'commit' || item.type === 'push'
 
   const rangedCommitCount = useMemo(
-    () => (timeRange === 'all' ? stats?.totalCommits ?? 0 : rangedFeed.filter(isCommitLike).length),
-    [rangedFeed, timeRange, stats],
+    () => (displayTimeRange === 'all' ? stats?.totalCommits ?? 0 : rangedFeed.filter(isCommitLike).length),
+    [rangedFeed, displayTimeRange, stats],
   )
 
   const priorCommitCount = useMemo(() => priorRangedFeed.filter(isCommitLike).length, [priorRangedFeed])
 
   const commitChangePercent = useMemo(
-    () => (timeRange === 'all' ? null : percentChange(rangedCommitCount, priorCommitCount)),
-    [rangedCommitCount, priorCommitCount, timeRange],
+    () => (displayTimeRange === 'all' ? null : percentChange(rangedCommitCount, priorCommitCount)),
+    [rangedCommitCount, priorCommitCount, displayTimeRange],
   )
 
   const commitSeries = useMemo(
-    () => buildDailySeries(rangedFeed.filter(isCommitLike).map((item) => item.timestamp), timeRange),
-    [rangedFeed, timeRange],
+    () => buildDailySeries(rangedFeed.filter(isCommitLike).map((item) => item.timestamp), displayTimeRange),
+    [rangedFeed, displayTimeRange],
   )
 
   const rangedActiveProjectCount = useMemo(
@@ -583,12 +587,12 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
   )
 
   const projectChangePercent = useMemo(
-    () => (timeRange === 'all' ? null : percentChange(rangedActiveProjectCount, priorActiveProjectCount)),
-    [rangedActiveProjectCount, priorActiveProjectCount, timeRange],
+    () => (displayTimeRange === 'all' ? null : percentChange(rangedActiveProjectCount, priorActiveProjectCount)),
+    [rangedActiveProjectCount, priorActiveProjectCount, displayTimeRange],
   )
 
   const projectSeries = useMemo(() => {
-    const days = timeRange === 'monthly' ? 30 : 7
+    const days = displayTimeRange === 'monthly' ? 30 : 7
     const seen = new Array(days).fill(null).map(() => new Set<string>())
     const now = Date.now()
     const dayMs = 24 * 60 * 60 * 1000
@@ -597,7 +601,7 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
       if (dayIndex >= 0 && dayIndex < days) seen[dayIndex].add(item.repo)
     }
     return seen.map((set) => set.size)
-  }, [rangedFeed, timeRange])
+  }, [rangedFeed, displayTimeRange])
 
   const rangedActiveDayCount = useMemo(() => {
     const days = new Set(rangedFeed.map((item) => new Date(item.timestamp).toDateString()))
@@ -610,12 +614,12 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
   }, [priorRangedFeed])
 
   const activeDayChangePercent = useMemo(
-    () => (timeRange === 'all' ? null : percentChange(rangedActiveDayCount, priorActiveDayCount)),
-    [rangedActiveDayCount, priorActiveDayCount, timeRange],
+    () => (displayTimeRange === 'all' ? null : percentChange(rangedActiveDayCount, priorActiveDayCount)),
+    [rangedActiveDayCount, priorActiveDayCount, displayTimeRange],
   )
 
   const activeDaySeries = useMemo(() => {
-    const days = timeRange === 'monthly' ? 30 : 7
+    const days = displayTimeRange === 'monthly' ? 30 : 7
     const buckets = new Array(days).fill(0)
     const now = Date.now()
     const dayMs = 24 * 60 * 60 * 1000
@@ -624,7 +628,7 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
       if (dayIndex >= 0 && dayIndex < days) buckets[dayIndex] = 1
     }
     return buckets
-  }, [rangedFeed, timeRange])
+  }, [rangedFeed, displayTimeRange])
 
   const rangedLineDeltas = useMemo(
     () => rangedFeed.filter(isCommitLike).map((item) => parseLineDelta(item.details)),
@@ -634,9 +638,9 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
   const hasLineData = useMemo(() => rangedLineDeltas.some((delta) => delta !== null), [rangedLineDeltas])
 
   const rangedLinesChanged = useMemo(() => {
-    if (timeRange === 'all') return (stats?.linesAdded ?? 0) + (stats?.linesDeleted ?? 0)
+    if (displayTimeRange === 'all') return (stats?.linesAdded ?? 0) + (stats?.linesDeleted ?? 0)
     return rangedLineDeltas.reduce<number>((sum, delta) => sum + (delta ?? 0), 0)
-  }, [timeRange, stats, rangedLineDeltas])
+  }, [displayTimeRange, stats, rangedLineDeltas])
 
   const priorLinesChanged = useMemo(
     () =>
@@ -648,12 +652,12 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
   )
 
   const lineChangePercent = useMemo(
-    () => (timeRange === 'all' || !hasLineData ? null : percentChange(rangedLinesChanged, priorLinesChanged)),
-    [rangedLinesChanged, priorLinesChanged, timeRange, hasLineData],
+    () => (displayTimeRange === 'all' || !hasLineData ? null : percentChange(rangedLinesChanged, priorLinesChanged)),
+    [rangedLinesChanged, priorLinesChanged, displayTimeRange, hasLineData],
   )
 
   const lineSeries = useMemo(() => {
-    const days = timeRange === 'monthly' ? 30 : 7
+    const days = displayTimeRange === 'monthly' ? 30 : 7
     const buckets = new Array(days).fill(0)
     const now = Date.now()
     const dayMs = 24 * 60 * 60 * 1000
@@ -664,10 +668,10 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
       if (dayIndex >= 0 && dayIndex < days) buckets[dayIndex] += delta
     }
     return buckets
-  }, [rangedFeed, timeRange])
+  }, [rangedFeed, displayTimeRange])
 
-  const rangeNoun = timeRange === 'weekly' ? "this week's" : timeRange === 'monthly' ? "this month's" : 'all-time'
-  const overviewSubtitle = `Your coding activity, ${timeRange === 'all' ? 'all in one place' : `over ${rangeNoun.replace("'s", '')}`}.`
+  const rangeNoun = displayTimeRange === 'weekly' ? "this week's" : displayTimeRange === 'monthly' ? "this month's" : 'all-time'
+  const overviewSubtitle = `Your coding activity, ${displayTimeRange === 'all' ? 'all in one place' : `over ${rangeNoun.replace("'s", '')}`}.`
 
   const motionClass =
     phase === 'leaving' ? 'animate-fall-out' : phase === 'entering' ? 'opacity-0' : 'animate-rise-in'
@@ -785,7 +789,7 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
                 <p className={`text-[13px] ${motionClass}`} style={{ color: COLOR.textMuted }}>
                   {displaySection === 'overview' && overviewSubtitle}
                   {displaySection === 'timeline' && `Every public event, ${rangeNoun}, newest first.`}
-                  {displaySection === 'projects' && `Repositories with activity ${timeRange === 'all' ? '' : rangeNoun}.`.trim()}
+                  {displaySection === 'projects' && (displayTimeRange === 'all' ? 'Repositories with activity.' : `Repositories with activity ${rangeNoun}.`)}
                   {displaySection === 'calendar' && 'Past month of contribution history.'}
                 </p>
                 {displaySection !== 'calendar' && (
@@ -807,29 +811,29 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
                         value={formatNumber(rangedCommitCount)}
                         trend={commitSeries}
                         changePercent={commitChangePercent}
-                        showTrend={timeRange !== 'all'}
+                        showTrend={displayTimeRange !== 'all'}
                       />
                       <StatCard
                         label="Projects"
                         value={formatNumber(rangedActiveProjectCount)}
                         trend={projectSeries}
                         changePercent={projectChangePercent}
-                        showTrend={timeRange !== 'all'}
+                        showTrend={displayTimeRange !== 'all'}
                       />
                       <StatCard
                         label="Active Days"
                         value={formatNumber(rangedActiveDayCount)}
-                        isPerfect={timeRange === 'weekly' && rangedActiveDayCount >= 7}
+                        isPerfect={displayTimeRange === 'weekly' && rangedActiveDayCount >= 7}
                         trend={activeDaySeries}
                         changePercent={activeDayChangePercent}
-                        showTrend={timeRange !== 'all'}
+                        showTrend={displayTimeRange !== 'all'}
                       />
                       <StatCard
                         label="Lines Changed"
-                        value={timeRange !== 'all' && !hasLineData ? '—' : formatNumber(rangedLinesChanged)}
+                        value={displayTimeRange !== 'all' && !hasLineData ? 'No data' : formatNumber(rangedLinesChanged)}
                         trend={lineSeries}
                         changePercent={lineChangePercent}
-                        showTrend={timeRange !== 'all' && hasLineData}
+                        showTrend={displayTimeRange !== 'all' && hasLineData}
                       />
                     </>
                   )}
@@ -928,8 +932,8 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
                         </ul>
                       )}
                     </SectionCard>
-                    <SectionCard title="Contribution Heatmap">
-                      {contributions.length === 0 ? (
+                    <SectionCard title={`Contribution Heatmap: ${RANGE_OPTIONS.find((o) => o.id === displayTimeRange)?.label}`}>
+                      {rangedContributions.length === 0 ? (
                         <p className="text-sm py-3 text-center" style={{ color: COLOR.textMuted }}>No contribution data available.</p>
                       ) : (
                         <>
@@ -945,7 +949,7 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
                                   {week.map((day) => (
                                     <span
                                       key={day.date}
-                                      title={`${day.date}: ${day.count} event${day.count === 1 ? '' : 's'}`}
+                                      title={`${new Date(day.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}: ${day.count} contribution${day.count === 1 ? '' : 's'}`}
                                       className="w-[9px] h-[9px] rounded-[2px]"
                                       style={{ backgroundColor: levelColor(day.level) }}
                                     />
@@ -1030,7 +1034,7 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
             )}
             {displaySection === 'timeline' && (
               <div className={motionClass}>
-                <SectionCard title={`Timeline — ${RANGE_OPTIONS.find((o) => o.id === timeRange)?.label}`}>
+                <SectionCard title={`Timeline: ${RANGE_OPTIONS.find((o) => o.id === displayTimeRange)?.label}`}>
                   {rangedFeed.length === 0 ? (
                     <p className="text-sm py-6 text-center" style={{ color: COLOR.textMuted }}>No public activity found for {username} in this range.</p>
                   ) : (
@@ -1133,7 +1137,10 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
             )}
             {displaySection === 'calendar' && (
               <div className={motionClass}>
-                <SectionCard title="Contribution Calendar (Past Month)">
+                <SectionCard title="Contribution Calendar">
+                  <p className="text-[12px] mb-4" style={{ color: COLOR.textMuted }}>
+                    Each day below shows how many contributions {username} made over the past month, counting commits, pull requests, issues, and other public GitHub activity.
+                  </p>
                   {contributions.length === 0 ? (
                     <p className="text-sm py-6 text-center" style={{ color: COLOR.textMuted }}>No contribution data available.</p>
                   ) : (
@@ -1152,7 +1159,7 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
                           </span>
                           <span className="w-full h-2 rounded-full" style={{ backgroundColor: levelColor(day.level) }} />
                           <span className="text-[11px] font-medium" style={{ color: COLOR.textPrimary }}>
-                            {day.count} event{day.count === 1 ? '' : 's'}
+                            {day.count} contribution{day.count === 1 ? '' : 's'}
                           </span>
                         </div>
                       ))}

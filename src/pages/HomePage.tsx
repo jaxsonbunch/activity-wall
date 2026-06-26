@@ -3,13 +3,14 @@ const COLOR = {
   textPrimary: '#f4f4f5',
   textMuted: '#a1a1aa',
   accent: '#e63946',
+  cardBg: '#1f1f23',
+  border: '#2a2a2e',
 }
 
 export default function HomePage() {
   const loginWithGitHub = () => {
     window.location.href = '/.netlify/functions/github-auth'
   }
-
   return (
     <div
       className="min-h-screen px-6 flex flex-col"
@@ -23,8 +24,7 @@ export default function HomePage() {
           <img src="/logo.png" alt="Logo" className="w-6 h-6" />
           Activity Wall
         </div>
-
-        <a
+        
           href="https://github.com/wasteofwifi/activity-wall"
           target="_blank"
           rel="noreferrer"
@@ -49,12 +49,10 @@ export default function HomePage() {
               clean dashboard
             </span>
           </h1>
-
           <p className="mt-5 text-lg" style={{ color: COLOR.textMuted }}>
             A minimal way to explore commits, languages, and contribution history
             without the clutter.
           </p>
-
           <div className="mt-10 flex flex-col gap-4 items-center">
             <button
               onClick={loginWithGitHub}
@@ -71,27 +69,76 @@ export default function HomePage() {
         </div>
       </div>
 
+      <div className="w-full max-w-6xl mx-auto mt-28 px-2">
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{
+            border: `1px solid ${COLOR.border}`,
+            backgroundColor: COLOR.cardBg,
+          }}
+        >
+          <img
+            src="/preview.png"
+            alt="Activity Wall preview"
+            className="w-full h-auto block"
+          />
+        </div>
+      </div>
+
+      <div className="w-full max-w-6xl mx-auto mt-28 px-2">
+        <div className="grid md:grid-cols-2 gap-10 items-center">
+          <div className="text-left">
+            <h2
+              className="text-3xl font-bold tracking-tight"
+              style={{ color: COLOR.textPrimary }}
+            >
+              Free and open source
+            </h2>
+            <p className="mt-4 text-base leading-relaxed" style={{ color: COLOR.textMuted }}>
+              Activity Wall&apos;s code is available on GitHub and anyone can
+              see inside it, contribute to it, or even make their own version.
+            </p>
+            
+              href="https://github.com/wasteofwifi/activity-wall"
+              target="_blank"
+              rel="noreferrer"
+              className="mt-4 inline-block font-medium"
+              style={{ color: COLOR.accent }}
+            >
+              github.com/wasteofwifi/activity-wall
+            </a>
+          </div>
+          <div className="flex justify-start md:justify-end">
+            <img
+              src="https://contrib.rocks/image?repo=wasteofwifi/activity-wall"
+              alt="Contributors"
+              className="max-w-full h-auto"
+            />
+          </div>
+        </div>
+      </div>
+
       <div
-        className="py-4 text-center text-sm"
+        className="py-4 mt-20 text-center text-sm"
         style={{ color: COLOR.textMuted }}
       >
         © Made by{' '}
-        <a
+        
           href="https://github.com/wasteofwifi"
           target="_blank"
           rel="noreferrer"
           style={{ color: COLOR.accent }}
-          className="font-medium hover:opacity-80 transition"
+          className="font-medium"
         >
           taz
         </a>
         {' licensed under '}
-        <a
+        
           href="https://github.com/wasteofwifi/activity-wall/blob/main/LICENSE"
           target="_blank"
           rel="noreferrer"
           style={{ color: COLOR.accent }}
-          className="font-medium hover:opacity-80 transition"
+          className="font-medium"
         >
           MIT License
         </a>

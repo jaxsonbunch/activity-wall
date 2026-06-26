@@ -14,7 +14,7 @@ export const handler: Handler = async (event) => {
   const proto = event.headers["x-forwarded-proto"] || "https"
   const redirectUri = `${proto}://${host}/.netlify/functions/github-callback`
 
-  const scope = "read:user repo"
+  const scope = "read:user repo read:org user:email"
 
   const url =
     "https://github.com/login/oauth/authorize" +

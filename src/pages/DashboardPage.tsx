@@ -510,10 +510,11 @@ export default function DashboardPage({ username, token, onLogout }: DashboardPa
     return () => clearTimeout(timeout)
   }, [activeSection, displaySection, timeRange, displayTimeRange])
 
-  const rangedContributions = useMemo(
-    () => contributions.filter((day) => isWithinRange(day.date, displayTimeRange)),
-    [contributions, displayTimeRange],
-  )
+  const rangedContributions = useMemo(() => {
+    const filtered = contributions.filter((day) => isWithinRange(day.date, displayTimeRange))
+    // Cap heatmap at 90 days to keep display compact
+    return displayTimeRange === 'all' ? filtered.slice(-90) : filtered
+  }, [contributions, displayTimeRange])
 
   const heatmapWeeks = useMemo(() => {
     const weeks: ContributionDay[][] = []
@@ -1150,7 +1151,7 @@ export default function DashboardPage({ username, token, onLogout }: DashboardPa
                     <p className="text-sm py-6 text-center" style={{ color: COLOR.textMuted }}>No contribution data available.</p>
                   ) : (
                     <div className="grid grid-cols-7 gap-2">
-                      {contributions.map((day) => (
+                      {contributions.slice(-30).map((day) => (
                         <div
                           key={day.date}
                           className="rounded-xl p-2.5 flex flex-col gap-1.5 backdrop-blur-xl"

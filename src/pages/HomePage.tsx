@@ -6,23 +6,8 @@ const COLOR = {
 }
 
 export default function HomePage() {
-  const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID
-
   const loginWithGitHub = () => {
-    if (!clientId) return
-
-    const redirectUri =
-      'https://activity-wall.netlify.app/.netlify/functions/github-callback'
-
-    const scope = 'read:user repo'
-
-    const url =
-      'https://github.com/login/oauth/authorize' +
-      `?client_id=${clientId}` +
-      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-      `&scope=${encodeURIComponent(scope)}`
-
-    window.location.href = url
+    window.location.href = '/.netlify/functions/github-auth'
   }
 
   return (

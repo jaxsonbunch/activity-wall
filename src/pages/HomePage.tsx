@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowRight, Github } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 
 interface HomePageProps {
   onUsernameSubmit: (username: string) => void
@@ -16,8 +16,6 @@ const COLOR = {
 }
 
 export default function HomePage({ onUsernameSubmit }: HomePageProps) {
-  const [username, setUsername] = useState('')
-
   const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID
 
   const loginWithGitHub = () => {
@@ -35,35 +33,31 @@ export default function HomePage({ onUsernameSubmit }: HomePageProps) {
     window.location.href = url
   }
 
-  const handleContinue = () => {
-    if (!username.trim()) return
-    onUsernameSubmit(username.trim())
-  }
-
   return (
     <div
       className="min-h-screen px-6 flex flex-col"
       style={{ backgroundColor: COLOR.pageBg }}
     >
-      {/* Top bar */}
       <div className="flex justify-between items-center py-6 max-w-6xl mx-auto w-full">
-        <div className="text-lg font-semibold" style={{ color: COLOR.textPrimary }}>
-          Activity Wall
+        <div className="flex items-center gap-3">
+          <img src="/logo.png" alt="Logo" className="w-8 h-8 rounded-lg" />
+          <div className="text-lg font-semibold" style={{ color: COLOR.textPrimary }}>
+            Activity Wall
+          </div>
         </div>
 
         <a
           href="https://github.com/wasteofwifi/activity-wall"
           target="_blank"
           rel="noreferrer"
-          className="flex items-center gap-2 text-sm transition-opacity hover:opacity-80"
-          style={{ color: COLOR.textMuted }}
+          style={{ color: '#ffffff' }}
+          className="flex items-center gap-2 text-sm"
         >
-          <Github className="w-4 h-4" />
+          <img src="/GitHub.png" alt="GitHub" className="w-4 h-4" />
           GitHub Repo
         </a>
       </div>
 
-      {/* Hero */}
       <div className="flex-1 flex items-center justify-center">
         <div className="max-w-3xl w-full text-center">
           <h1
@@ -72,7 +66,8 @@ export default function HomePage({ onUsernameSubmit }: HomePageProps) {
           >
             Your GitHub activity,
             <br />
-            rebuilt into a <span style={{ color: COLOR.accent }}>clean dashboard</span>
+            rebuilt into a{' '}
+            <span style={{ color: COLOR.accent }}>clean dashboard</span>
           </h1>
 
           <p className="mt-5 text-lg" style={{ color: COLOR.textMuted }}>
@@ -80,8 +75,7 @@ export default function HomePage({ onUsernameSubmit }: HomePageProps) {
             without the clutter.
           </p>
 
-          {/* CTA block */}
-          <div className="mt-10 flex flex-col gap-4 items-center">
+          <div className="mt-10 flex justify-center">
             <button
               onClick={loginWithGitHub}
               className="flex items-center justify-center gap-2 rounded-2xl px-6 py-3 font-semibold transition-all"
@@ -96,47 +90,8 @@ export default function HomePage({ onUsernameSubmit }: HomePageProps) {
                 (e.currentTarget.style.backgroundColor = COLOR.accent)
               }
             >
-              <Github className="w-5 h-5" />
+              <img src="/GitHub.png" alt="GitHub" className="w-5 h-5" />
               Continue with GitHub
-            </button>
-
-            <span className="text-xs" style={{ color: COLOR.textMuted }}>
-              or explore without login
-            </span>
-          </div>
-
-          {/* Optional username input */}
-          <div
-            className="mt-10 mx-auto max-w-md rounded-2xl p-5"
-            style={{
-              backgroundColor: COLOR.cardBg,
-              border: `1px solid ${COLOR.border}`,
-              backdropFilter: 'blur(12px)',
-            }}
-          >
-            <input
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter GitHub username"
-              className="w-full px-4 py-3 rounded-xl outline-none"
-              style={{
-                backgroundColor: '#2a2a2f',
-                border: `1px solid ${COLOR.border}`,
-                color: COLOR.textPrimary,
-              }}
-            />
-
-            <button
-              onClick={handleContinue}
-              className="w-full mt-3 flex items-center justify-center gap-2 rounded-xl py-3 font-semibold transition-all"
-              style={{
-                backgroundColor: '#2a2a2f',
-                color: COLOR.textPrimary,
-                border: `1px solid ${COLOR.border}`,
-              }}
-            >
-              Continue
-              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>

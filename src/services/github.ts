@@ -45,13 +45,24 @@ export async function getUserFromToken(token: string): Promise<GitHubUser> {
 
 export async function getUser(username: string, token?: string): Promise<GitHubUser> {
   if (token) {
-    const authenticatedUser = await getUserFromToken(token)
-    if (authenticatedUser.login.toLowerCase() === username.toLowerCase()) {
+    try {
+      const authenticatedUser = await getUserFromToken(token)
+      if (authenticatedUser.login.toLowerCase() === username.toLowerCase()) {
+        return authenticatedUser
+      }
+    } catch (_) {}
+  }
+
+  try {
+    const response = await githubFetch(`/users/${username}`, token)
+    return response.json()
+  } catch (err) {
+    if (token) {
+      const authenticatedUser = await getUserFromToken(token)
       return authenticatedUser
     }
+    throw err
   }
-  const response = await githubFetch(`/users/${username}`, token)
-  return response.json()
 }
 
 export async function getRepos(username: string, token?: string): Promise<GitHubRepo[]> {

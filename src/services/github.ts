@@ -49,11 +49,19 @@ export async function getUser(username: string, token?: string): Promise<GitHubU
 }
 
 export async function getRepos(username: string, token?: string): Promise<GitHubRepo[]> {
+  if (token) {
+    const response = await githubFetch(`/user/repos?sort=updated&per_page=100&visibility=all`, token)
+    return response.json()
+  }
   const response = await githubFetch(`/users/${username}/repos?sort=updated&per_page=100`, token)
   return response.json()
 }
 
 export async function getEvents(username: string, token?: string): Promise<GitHubEvent[]> {
+  if (token) {
+    const response = await githubFetch(`/user/events?per_page=100`, token)
+    return response.json()
+  }
   const response = await githubFetch(`/users/${username}/events/public?per_page=100`, token)
   return response.json()
 }
@@ -109,17 +117,19 @@ export async function fetchDashboardData(username: string, token?: string): Prom
   activityFeed: ActivityFeedItem[]
   topRepos: GitHubRepo[]
 }> {
-  const [user, repos, events] = await Promise.all([getUser(username, token), getRepos(username, token), getEvents(username, token)])
+  const [user, repos, events] = await Promise.all([
+    getUser(username, token),
+    getRepos(username, token),
+    getEvents(username, token)
+  ])
 
   const topRepos = [...repos]
     .sort((a, b) => new Date(b.pushed_at).getTime() - new Date(a.pushed_at).getTime())
     .slice(0, 6)
 
-  // Better total commits calculation
   const commitEvents = events.filter((e) => e.type === 'PushEvent')
   let totalCommits = commitEvents.reduce((sum, e) => sum + (e.payload.size || 0), 0)
 
-  // Stronger repo-based estimation
   const repoBasedCommits = repos.reduce((sum, repo) => {
     return sum + Math.floor((repo.size || 0) / 8)
   }, 0)
@@ -129,15 +139,22 @@ export async function fetchDashboardData(username: string, token?: string): Prom
   const totalProjects = repos.length
   const activeDaysSet = new Set(events.map((e) => e.created_at.split('T')[0]))
   const activeDays = activeDaysSet.size
-
   const linesAdded = Math.floor(totalCommits * 68)
   const linesDeleted = Math.floor(linesAdded * 0.28)
 
-  const stats: DashboardStats = { totalCommits, totalProjects, activeDays, linesAdded, linesDeleted }
+  const stats: DashboardStats = {
+    totalCommits,
+    totalProjects,
+    activeDays,
+    linesAdded,
+    linesDeleted
+  }
 
   const languageCounts: Record<string, number> = {}
   for (const repo of repos) {
-    if (repo.language) languageCounts[repo.language] = (languageCounts[repo.language] || 0) + 1
+    if (repo.language) {
+      languageCounts[repo.language] = (languageCounts[repo.language] || 0) + 1
+    }
   }
 
   const languages: LanguageStat[] = Object.entries(languageCounts)
@@ -154,7 +171,12 @@ export async function fetchDashboardData(username: string, token?: string): Prom
     const dateStr = d.toISOString().split('T')[0]
     const dayEvents = events.filter((e) => e.created_at.startsWith(dateStr))
     const dayCommits = dayEvents.filter((e) => e.type === 'PushEvent').reduce((s, e) => s + (e.payload.size || 0), 0)
-    weeklyActivity.push({ day: days[d.getDay()], commits: dayCommits, additions: dayCommits * 38, deletions: dayCommits * 14 })
+    weeklyActivity.push({
+      day: days[d.getDay()],
+      commits: dayCommits,
+      additions: dayCommits * 38,
+      deletions: dayCommits * 14
+    })
   }
 
   const contributions: ContributionDay[] = []
@@ -169,10 +191,17 @@ export async function fetchDashboardData(username: string, token?: string): Prom
   }
 
   const projects: ProjectActivity[] = topRepos.slice(0, 5).map((repo) => {
-    const repoEvents = events.filter((e) => e.repo.name === repo.full_name)
+    const repoEvents = events.filter((e) => e.repo.name === repo.full_name || e.repo.full_name === repo.full_name)
     const repoCommits = repoEvents.filter((e) => e.type === 'PushEvent').reduce((s, e) => s + (e.payload.size || 0), 0)
     const progress = Math.min(100, Math.max(10, repoCommits * 5 + 20))
-    return { name: repo.name, commits: repoCommits, additions: repoCommits * 38, deletions: repoCommits * 14, progress, lastActivity: repo.pushed_at }
+    return {
+      name: repo.name,
+      commits: repoCommits,
+      additions: repoCommits * 38,
+      deletions: repoCommits * 14,
+      progress,
+      lastActivity: repo.pushed_at
+    }
   })
 
   const activityFeed: ActivityFeedItem[] = events.slice(0, 20).map((event) => {
@@ -208,8 +237,27 @@ export async function fetchDashboardData(username: string, token?: string): Prom
       default:
         message = `${event.type.replace('Event', '')} in ${event.repo.name}`
     }
-    return { id: event.id, type, message, repo: event.repo.name, timestamp: event.created_at, avatar: event.actor.avatar_url, details }
+    return {
+      id: event.id,
+      type,
+      message,
+      repo: event.repo.name,
+      timestamp: event.created_at,
+      avatar: event.actor.avatar_url,
+      details
+    }
   })
 
-  return { user, repos, events, stats, languages, weeklyActivity, contributions, projects, activityFeed, topRepos }
+  return {
+    user,
+    repos,
+    events,
+    stats,
+    languages,
+    weeklyActivity,
+    contributions,
+    projects,
+    activityFeed,
+    topRepos
+  }
 }

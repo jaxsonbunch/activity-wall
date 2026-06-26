@@ -85,7 +85,7 @@ export default function HomePage() {
         >
           taz
         </a>
-        {' · licensed under '}
+        {' licensed under '}
         <a
           href="https://github.com/wasteofwifi/activity-wall/blob/main/LICENSE"
           target="_blank"

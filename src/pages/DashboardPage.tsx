@@ -7,6 +7,7 @@ import {
   FolderKanban,
   CalendarDays,
   ChevronRight,
+  ChevronDown,
   Code2,
   GitMerge,
   Layers,
@@ -49,6 +50,7 @@ const COLOR = {
 }
 
 type Section = 'overview' | 'timeline' | 'projects' | 'calendar'
+type TimeRange = 'weekly' | 'monthly' | 'all'
 
 const NAV_ITEMS: { id: Section; label: string; icon: typeof LayoutGrid }[] = [
   { id: 'overview', label: 'Dashboard', icon: LayoutGrid },
@@ -56,6 +58,18 @@ const NAV_ITEMS: { id: Section; label: string; icon: typeof LayoutGrid }[] = [
   { id: 'projects', label: 'Projects', icon: FolderKanban },
   { id: 'calendar', label: 'Calendar', icon: CalendarDays },
 ]
+
+const RANGE_OPTIONS: { id: TimeRange; label: string }[] = [
+  { id: 'weekly', label: 'This week' },
+  { id: 'monthly', label: 'This month' },
+  { id: 'all', label: 'All time' },
+]
+
+const RANGE_DAYS: Record<TimeRange, number | null> = {
+  weekly: 7,
+  monthly: 30,
+  all: null,
+}
 
 const ACTIVITY_ICONS: Record<ActivityFeedItem['type'], typeof Code2> = {
   commit: Code2,
@@ -109,6 +123,13 @@ function dateLabel(iso: string): string {
 
 function formatNumber(n: number): string {
   return n.toLocaleString('en-US')
+}
+
+function isWithinRange(iso: string, range: TimeRange): boolean {
+  const days = RANGE_DAYS[range]
+  if (days === null) return true
+  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000
+  return new Date(iso).getTime() >= cutoff
 }
 
 function describeFeedTag(item: ActivityFeedItem, repos: GitHubRepo[]): string {
@@ -170,11 +191,11 @@ function StatCard({
   trend: number[]
 }) {
   return (
-    <div 
+    <div
       className="rounded-2xl px-4 py-3.5 backdrop-blur-xl"
-      style={{ 
-        backgroundColor: 'rgba(36, 36, 40, 0.65)', 
-        border: `1px solid rgba(52, 52, 58, 0.8)` 
+      style={{
+        backgroundColor: 'rgba(36, 36, 40, 0.65)',
+        border: `1px solid rgba(52, 52, 58, 0.8)`,
       }}
     >
       <span className="text-[13px]" style={{ color: COLOR.textMuted }}>{label}</span>
@@ -248,11 +269,11 @@ function levelColor(level: number): string {
 
 function SectionCard({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div 
+    <div
       className="rounded-2xl p-4 backdrop-blur-xl"
-      style={{ 
-        backgroundColor: 'rgba(36, 36, 40, 0.65)', 
-        border: `1px solid rgba(52, 52, 58, 0.8)` 
+      style={{
+        backgroundColor: 'rgba(36, 36, 40, 0.65)',
+        border: `1px solid rgba(52, 52, 58, 0.8)`,
       }}
     >
       <div className="flex items-center justify-between mb-3.5">
@@ -260,6 +281,73 @@ function SectionCard({ title, action, children }: { title: string; action?: Reac
         {action}
       </div>
       {children}
+    </div>
+  )
+}
+
+function RangeDropdown({ value, onChange }: { value: TimeRange; onChange: (range: TimeRange) => void }) {
+  const [open, setOpen] = useState(false)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const current = RANGE_OPTIONS.find((option) => option.id === value) ?? RANGE_OPTIONS[0]
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  return (
+    <div ref={wrapperRef} className="relative inline-block">
+      <button
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex items-center gap-1.5 text-[13px] font-medium rounded-lg px-2.5 py-1.5 transition-colors"
+        style={{ color: COLOR.textSecondary, backgroundColor: open ? COLOR.cardBg : 'transparent' }}
+        onMouseEnter={(e) => {
+          if (!open) e.currentTarget.style.backgroundColor = COLOR.cardBg
+        }}
+        onMouseLeave={(e) => {
+          if (!open) e.currentTarget.style.backgroundColor = 'transparent'
+        }}
+      >
+        {current.label}
+        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div
+          className="animate-drop-in absolute left-0 top-full mt-1.5 w-36 rounded-xl p-1 z-20 shadow-xl"
+          style={{ backgroundColor: COLOR.pageBg, border: `1px solid ${COLOR.border}` }}
+        >
+          {RANGE_OPTIONS.map((option) => {
+            const active = option.id === value
+            return (
+              <button
+                key={option.id}
+                onClick={() => {
+                  onChange(option.id)
+                  setOpen(false)
+                }}
+                className="w-full text-left text-[13px] rounded-lg px-2.5 py-1.5 transition-colors"
+                style={{
+                  color: active ? COLOR.accent : COLOR.textSecondary,
+                  backgroundColor: active ? COLOR.accentSoft : 'transparent',
+                }}
+                onMouseEnter={(e) => {
+                  if (!active) e.currentTarget.style.backgroundColor = COLOR.cardBg
+                }}
+                onMouseLeave={(e) => {
+                  if (!active) e.currentTarget.style.backgroundColor = 'transparent'
+                }}
+              >
+                {option.label}
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
@@ -277,7 +365,9 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeSection, setActiveSection] = useState<Section>('overview')
-  const [pageVisible, setPageVisible] = useState(false)
+  const [displaySection, setDisplaySection] = useState<Section>('overview')
+  const [phase, setPhase] = useState<'entering' | 'settled' | 'leaving'>('entering')
+  const [timeRange, setTimeRange] = useState<TimeRange>('weekly')
   const contentRef = useRef<HTMLDivElement>(null)
 
   const loadData = async () => {
@@ -307,23 +397,25 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
 
   useEffect(() => {
     if (!loading && !error) {
-      const frame = requestAnimationFrame(() => setPageVisible(true))
+      setPhase('entering')
+      const frame = requestAnimationFrame(() => setPhase('settled'))
       return () => cancelAnimationFrame(frame)
     }
-    setPageVisible(false)
   }, [loading, error])
 
   useEffect(() => {
-    setPageVisible(false)
-    const frame = requestAnimationFrame(() => setPageVisible(true))
-    return () => cancelAnimationFrame(frame)
-  }, [activeSection])
-
-  useEffect(() => {
-    if (contentRef.current) {
-      contentRef.current.scrollTo({ top: 0, behavior: 'smooth' })
-    }
-  }, [activeSection])
+    if (activeSection === displaySection) return
+    setPhase('leaving')
+    const timeout = setTimeout(() => {
+      setDisplaySection(activeSection)
+      setPhase('entering')
+      requestAnimationFrame(() => setPhase('settled'))
+      if (contentRef.current) {
+        contentRef.current.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+    }, 180)
+    return () => clearTimeout(timeout)
+  }, [activeSection, displaySection])
 
   const heatmapWeeks = useMemo(() => {
     const weeks: ContributionDay[][] = []
@@ -344,7 +436,34 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
     return contributions.reduce((best, day) => (day.count > best.count ? day : best), contributions[0])
   }, [contributions])
 
-  const fadeClass = `transition-all duration-300 ease-out ${pageVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1.5'}`
+  const rangedFeed = useMemo(
+    () => activityFeed.filter((item) => isWithinRange(item.timestamp, timeRange)),
+    [activityFeed, timeRange],
+  )
+
+  const rangedProjects = useMemo(() => {
+    if (timeRange === 'all') return projects
+    const activeNames = new Set(rangedFeed.map((item) => item.repo))
+    const filtered = projects.filter((project) => activeNames.has(project.name))
+    return filtered.length > 0 ? filtered : projects
+  }, [projects, rangedFeed, timeRange])
+
+  const rangedTopRepos = useMemo(() => {
+    if (timeRange === 'all') return topRepos
+    const activeNames = new Set(rangedFeed.map((item) => item.repo))
+    const filtered = topRepos.filter((repo) => activeNames.has(repo.full_name) || activeNames.has(repo.name))
+    return filtered.length > 0 ? filtered : topRepos
+  }, [topRepos, rangedFeed, timeRange])
+
+  const rangeNoun = timeRange === 'weekly' ? "this week's" : timeRange === 'monthly' ? "this month's" : 'all-time'
+  const overviewSubtitle = `Your coding activity, ${timeRange === 'all' ? 'all in one place' : `over ${rangeNoun.replace("'s", '')}`}.`
+
+  const motionClass =
+    phase === 'leaving' ? 'animate-fall-out' : phase === 'entering' ? 'opacity-0' : 'animate-rise-in'
+
+  function staggerStyle(delayMs: number) {
+    return phase === 'settled' ? { animationDelay: `${delayMs}ms` } : undefined
+  }
 
   if (loading) {
     return (
@@ -383,7 +502,7 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
         className="w-[210px] shrink-0 flex flex-col rounded-3xl shadow-2xl mt-3 ml-3 mb-3 overflow-hidden"
         style={{
           backgroundColor: COLOR.pageBg,
-          border: `1px solid #3a3a42`
+          border: `1px solid #3a3a42`,
         }}
       >
         <div className="px-5 pt-6 pb-6 flex items-center gap-2.5">
@@ -397,7 +516,7 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
               <button
                 key={id}
                 onClick={() => setActiveSection(id)}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[13.5px] font-medium transition-all"
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[13.5px] font-medium transition-all duration-200"
                 style={
                   active
                     ? { backgroundColor: '#3a1419', color: COLOR.accent }
@@ -446,21 +565,26 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
       </aside>
       <div className="flex-1 flex flex-col overflow-hidden">
         <div ref={contentRef} className="flex-1 overflow-y-auto">
-          <div className={`px-7 pt-6 pb-5 ${fadeClass}`}>
-            <h1 className="text-2xl font-bold" style={{ color: COLOR.textPrimary }}>
-              Dashboard
-            </h1>
-            <p className="text-[13px] mt-0.5" style={{ color: COLOR.textMuted }}>
-              {activeSection === 'overview' && 'Your coding activity, all in one place.'}
-              {activeSection === 'timeline' && 'Every public event, newest first.'}
-              {activeSection === 'projects' && 'All your repositories'}
-              {activeSection === 'calendar' && 'Past month of contribution history.'}
-            </p>
+          <div className={`px-7 pt-6 pb-5 flex items-start justify-between gap-4 ${motionClass}`}>
+            <div>
+              <h1 className="text-2xl font-bold" style={{ color: COLOR.textPrimary }}>
+                Dashboard
+              </h1>
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className="text-[13px]" style={{ color: COLOR.textMuted }}>
+                  {displaySection === 'overview' && overviewSubtitle}
+                  {displaySection === 'timeline' && `Every public event, ${rangeNoun}, newest first.`}
+                  {displaySection === 'projects' && `Repositories with activity ${timeRange === 'all' ? '' : rangeNoun}.`.trim()}
+                  {displaySection === 'calendar' && 'Past month of contribution history.'}
+                </p>
+                {displaySection !== 'calendar' && <RangeDropdown value={timeRange} onChange={setTimeRange} />}
+              </div>
+            </div>
           </div>
           <div className="px-7 pb-8">
-            {activeSection === 'overview' && (
-              <div className={`space-y-5 ${fadeClass}`}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {displaySection === 'overview' && (
+              <div className={`space-y-5 ${motionClass}`}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" style={staggerStyle(0)}>
                   {stats && (
                     <>
                       <StatCard
@@ -471,7 +595,7 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
                       <StatCard
                         label="Projects"
                         value={formatNumber(stats.totalProjects)}
-                        trend={projects.map((p) => p.commits).reverse()}
+                        trend={rangedProjects.map((p) => p.commits).reverse()}
                       />
                       <StatCard
                         label="Active Days"
@@ -487,17 +611,17 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
                     </>
                   )}
                 </div>
-                <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-5">
+                <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-5" style={staggerStyle(70)}>
                   <SectionCard title="Activity Feed">
-                    {activityFeed.length === 0 ? (
+                    {rangedFeed.length === 0 ? (
                       <p className="text-sm py-5 text-center" style={{ color: COLOR.textMuted }}>
                         Nothing here yet. Activity shows up once {username} pushes, opens, or merges something public.
                       </p>
                     ) : (
                       <ul>
-                        {activityFeed.slice(0, 4).map((item, idx) => {
+                        {rangedFeed.slice(0, 4).map((item, idx) => {
                           const Icon = ACTIVITY_ICONS[item.type]
-                          const isLast = idx === Math.min(activityFeed.length, 4) - 1
+                          const isLast = idx === Math.min(rangedFeed.length, 4) - 1
                           const tag = describeFeedTag(item, repos)
                           return (
                             <li key={item.id} className="flex gap-3">
@@ -534,7 +658,7 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
                         })}
                       </ul>
                     )}
-                    {activityFeed.length > 0 && (
+                    {rangedFeed.length > 0 && (
                       <div className="flex justify-center mt-3">
                         <button
                           onClick={() => setActiveSection('timeline')}
@@ -549,11 +673,11 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
                   </SectionCard>
                   <div className="space-y-5">
                     <SectionCard title="Active Projects">
-                      {projects.length === 0 ? (
+                      {rangedProjects.length === 0 ? (
                         <p className="text-sm py-3 text-center" style={{ color: COLOR.textMuted }}>No repositories with recent pushes.</p>
                       ) : (
                         <ul className="space-y-3">
-                          {projects.map((project, idx) => {
+                          {rangedProjects.map((project, idx) => {
                             const palette = badgeStyle(idx)
                             return (
                               <li key={project.name} className="flex items-center gap-2.5">
@@ -571,7 +695,7 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
                                   <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: COLOR.cardBgAlt }}>
                                     <div
                                       className="h-full rounded-full transition-all duration-700"
-                                      style={{ width: pageVisible ? `${project.progress}%` : '0%', backgroundColor: COLOR.accent }}
+                                      style={{ width: phase === 'settled' ? `${project.progress}%` : '0%', backgroundColor: COLOR.accent }}
                                     />
                                   </div>
                                 </div>
@@ -625,7 +749,7 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
                     </SectionCard>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5" style={staggerStyle(140)}>
                   <SectionCard title="Top Languages">
                     {languages.length === 0 ? (
                       <p className="text-sm py-3 text-center" style={{ color: COLOR.textMuted }}>No language data yet.</p>
@@ -651,11 +775,11 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
                     )}
                   </SectionCard>
                   <SectionCard title="Top Repositories">
-                    {topRepos.length === 0 ? (
+                    {rangedTopRepos.length === 0 ? (
                       <p className="text-sm py-3 text-center" style={{ color: COLOR.textMuted }}>No public repositories found.</p>
                     ) : (
                       <ul className="space-y-2.5">
-                        {topRepos.slice(0, 3).map((repo, idx) => {
+                        {rangedTopRepos.slice(0, 3).map((repo, idx) => {
                           const repoCommits = projects.find((p) => p.name === repo.name)?.commits ?? 0
                           const palette = badgeStyle(idx)
                           return (
@@ -681,16 +805,16 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
                 </div>
               </div>
             )}
-            {activeSection === 'timeline' && (
-              <div className={fadeClass}>
-                <SectionCard title="Full Timeline">
-                  {activityFeed.length === 0 ? (
-                    <p className="text-sm py-6 text-center" style={{ color: COLOR.textMuted }}>No public activity found for {username}.</p>
+            {displaySection === 'timeline' && (
+              <div className={motionClass}>
+                <SectionCard title={`Timeline — ${RANGE_OPTIONS.find((o) => o.id === timeRange)?.label}`}>
+                  {rangedFeed.length === 0 ? (
+                    <p className="text-sm py-6 text-center" style={{ color: COLOR.textMuted }}>No public activity found for {username} in this range.</p>
                   ) : (
                     <ul>
-                      {activityFeed.map((item, idx) => {
+                      {rangedFeed.map((item, idx) => {
                         const Icon = ACTIVITY_ICONS[item.type]
-                        const isLast = idx === activityFeed.length - 1
+                        const isLast = idx === rangedFeed.length - 1
                         const tag = describeFeedTag(item, repos)
                         return (
                           <li key={item.id} className="flex gap-3">
@@ -725,8 +849,8 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
                 </SectionCard>
               </div>
             )}
-            {activeSection === 'projects' && (
-              <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 ${fadeClass}`}>
+            {displaySection === 'projects' && (
+              <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 ${motionClass}`}>
                 {repos.length === 0 ? (
                   <p className="text-sm py-6 text-center col-span-full" style={{ color: COLOR.textMuted }}>No public repositories found.</p>
                 ) : (
@@ -740,9 +864,9 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
                         target="_blank"
                         rel="noopener noreferrer"
                         className="rounded-2xl p-4 flex flex-col gap-3 transition-all hover:-translate-y-0.5 backdrop-blur-xl"
-                        style={{ 
-                          backgroundColor: 'rgba(36, 36, 40, 0.65)', 
-                          border: `1px solid rgba(52, 52, 58, 0.8)` 
+                        style={{
+                          backgroundColor: 'rgba(36, 36, 40, 0.65)',
+                          border: `1px solid rgba(52, 52, 58, 0.8)`,
                         }}
                       >
                         <div className="flex items-center gap-2.5">
@@ -784,8 +908,8 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
                 )}
               </div>
             )}
-            {activeSection === 'calendar' && (
-              <div className={fadeClass}>
+            {displaySection === 'calendar' && (
+              <div className={motionClass}>
                 <SectionCard title="Contribution Calendar (Past Month)">
                   {contributions.length === 0 ? (
                     <p className="text-sm py-6 text-center" style={{ color: COLOR.textMuted }}>No contribution data available.</p>
@@ -795,9 +919,9 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
                         <div
                           key={day.date}
                           className="rounded-xl p-2.5 flex flex-col gap-1.5 backdrop-blur-xl"
-                          style={{ 
-                            backgroundColor: 'rgba(42, 42, 47, 0.75)', 
-                            border: `1px solid rgba(52, 52, 58, 0.8)` 
+                          style={{
+                            backgroundColor: 'rgba(42, 42, 47, 0.75)',
+                            border: `1px solid rgba(52, 52, 58, 0.8)`,
                           }}
                         >
                           <span className="text-[10px]" style={{ color: COLOR.textMuted }}>

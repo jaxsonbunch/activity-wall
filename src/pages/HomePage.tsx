@@ -87,13 +87,10 @@ export default function HomePage() {
       </div>
 
       <div
-        className="py-4 text-center text-sm flex items-center justify-center gap-2 flex-wrap"
+        className="py-4 text-center text-sm"
         style={{ color: COLOR.textMuted }}
       >
-        <span>©</span>
-
-        <span>Made by</span>
-
+        © Made by{' '}
         <a
           href="https://github.com/wasteofwifi"
           target="_blank"
@@ -103,9 +100,7 @@ export default function HomePage() {
         >
           taz
         </a>
-
-        <span>licensed under</span>
-
+        {' · licensed under '}
         <a
           href="https://github.com/wasteofwifi/activity-wall/blob/main/LICENSE"
           target="_blank"

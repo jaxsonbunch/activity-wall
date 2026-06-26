@@ -788,7 +788,11 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
                   {displaySection === 'projects' && `Repositories with activity ${timeRange === 'all' ? '' : rangeNoun}.`.trim()}
                   {displaySection === 'calendar' && 'Past month of contribution history.'}
                 </p>
-                {displaySection !== 'calendar' && <RangeDropdown value={timeRange} onChange={setTimeRange} />}
+                {displaySection !== 'calendar' && (
+                  <div className={motionClass}>
+                    <RangeDropdown value={timeRange} onChange={setTimeRange} />
+                  </div>
+                )}
               </div>
             </div>
           </div>

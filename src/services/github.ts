@@ -18,16 +18,15 @@ async function githubFetch(path: string, token?: string): Promise<Response> {
     'User-Agent': 'Activity-Wall',
   }
   if (token) headers['Authorization'] = `Bearer ${token}`
+
   const response = await fetch(`${GITHUB_API_BASE}${path}`, { headers })
+
   if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error('That GitHub user doesn\'t exist.')
-    }
-    if (response.status === 403) {
-      throw new Error('GitHub rate-limited this request. Wait a minute and try again.')
-    }
+    if (response.status === 404) throw new Error("That GitHub user doesn't exist.")
+    if (response.status === 403) throw new Error('GitHub rate-limited this request. Wait a minute and try again.')
     throw new Error(`GitHub API error: ${response.status}`)
   }
+
   return response
 }
 
@@ -39,6 +38,7 @@ export async function getUserFromToken(token: string): Promise<GitHubUser> {
       Authorization: `Bearer ${token}`,
     },
   })
+
   if (!response.ok) throw new Error('Failed to fetch authenticated user')
   return response.json()
 }
@@ -53,6 +53,7 @@ export async function getRepos(username: string, token?: string): Promise<GitHub
     const response = await githubFetch(`/user/repos?sort=updated&per_page=100&visibility=all`, token)
     return response.json()
   }
+
   const response = await githubFetch(`/users/${username}/repos?sort=updated&per_page=100`, token)
   return response.json()
 }
@@ -62,6 +63,7 @@ export async function getEvents(username: string, token?: string): Promise<GitHu
     const response = await githubFetch(`/user/events?per_page=100`, token)
     return response.json()
   }
+
   const response = await githubFetch(`/users/${username}/events/public?per_page=100`, token)
   return response.json()
 }
@@ -120,25 +122,26 @@ export async function fetchDashboardData(username: string, token?: string): Prom
   const [user, repos, events] = await Promise.all([
     getUser(username, token),
     getRepos(username, token),
-    getEvents(username, token)
+    getEvents(username, token),
   ])
 
-  const topRepos = [...repos]
-    .sort((a, b) => new Date(b.pushed_at).getTime() - new Date(a.pushed_at).getTime())
-    .slice(0, 6)
+  const sortedRepos = [...repos].sort(
+    (a, b) => new Date(b.pushed_at).getTime() - new Date(a.pushed_at).getTime()
+  )
+
+  const topRepos = sortedRepos.slice(0, 6)
 
   const commitEvents = events.filter((e) => e.type === 'PushEvent')
-  let totalCommits = commitEvents.reduce((sum, e) => sum + (e.payload.size || 0), 0)
+  let totalCommits = commitEvents.reduce((sum, e: any) => sum + (e.payload?.size || 0), 0)
 
-  const repoBasedCommits = repos.reduce((sum, repo) => {
-    return sum + Math.floor((repo.size || 0) / 8)
-  }, 0)
+  const repoBasedCommits = repos.reduce((sum, repo) => sum + Math.floor((repo.size || 0) / 8), 0)
 
   totalCommits = Math.max(totalCommits, repoBasedCommits, 120)
 
   const totalProjects = repos.length
   const activeDaysSet = new Set(events.map((e) => e.created_at.split('T')[0]))
   const activeDays = activeDaysSet.size
+
   const linesAdded = Math.floor(totalCommits * 68)
   const linesDeleted = Math.floor(linesAdded * 0.28)
 
@@ -147,10 +150,11 @@ export async function fetchDashboardData(username: string, token?: string): Prom
     totalProjects,
     activeDays,
     linesAdded,
-    linesDeleted
+    linesDeleted,
   }
 
   const languageCounts: Record<string, number> = {}
+
   for (const repo of repos) {
     if (repo.language) {
       languageCounts[repo.language] = (languageCounts[repo.language] || 0) + 1
@@ -158,93 +162,128 @@ export async function fetchDashboardData(username: string, token?: string): Prom
   }
 
   const languages: LanguageStat[] = Object.entries(languageCounts)
-    .map(([name, count]) => ({ name, count, color: getLanguageColor(name) }))
+    .map(([name, count]) => ({
+      name,
+      count,
+      color: getLanguageColor(name),
+    }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 6)
 
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
   const weeklyActivity: WeeklyActivity[] = []
+
   const now = new Date()
+
   for (let i = 6; i >= 0; i--) {
     const d = new Date(now)
     d.setDate(d.getDate() - i)
+
     const dateStr = d.toISOString().split('T')[0]
+
     const dayEvents = events.filter((e) => e.created_at.startsWith(dateStr))
-    const dayCommits = dayEvents.filter((e) => e.type === 'PushEvent').reduce((s, e) => s + (e.payload.size || 0), 0)
+    const dayCommits = dayEvents
+      .filter((e) => e.type === 'PushEvent')
+      .reduce((s, e: any) => s + (e.payload?.size || 0), 0)
+
     weeklyActivity.push({
       day: days[d.getDay()],
       commits: dayCommits,
       additions: dayCommits * 38,
-      deletions: dayCommits * 14
+      deletions: dayCommits * 14,
     })
   }
 
   const contributions: ContributionDay[] = []
+
   for (let i = 29; i >= 0; i--) {
     const d = new Date(now)
     d.setDate(d.getDate() - i)
+
     const dateStr = d.toISOString().split('T')[0]
+
     const dayEvents = events.filter((e) => e.created_at.startsWith(dateStr))
     const count = dayEvents.length
+
     const level = count === 0 ? 0 : count <= 2 ? 1 : count <= 5 ? 2 : count <= 8 ? 3 : 4
+
     contributions.push({ date: dateStr, count, level })
   }
 
   const projects: ProjectActivity[] = topRepos.slice(0, 5).map((repo) => {
-    const repoEvents = events.filter((e) => e.repo.name === repo.full_name || e.repo.full_name === repo.full_name)
-    const repoCommits = repoEvents.filter((e) => e.type === 'PushEvent').reduce((s, e) => s + (e.payload.size || 0), 0)
+    const repoEvents = events.filter(
+      (e: any) => e.repo?.name === repo.full_name || e.repo?.full_name === repo.full_name
+    )
+
+    const repoCommits = repoEvents
+      .filter((e) => e.type === 'PushEvent')
+      .reduce((s, e: any) => s + (e.payload?.size || 0), 0)
+
     const progress = Math.min(100, Math.max(10, repoCommits * 5 + 20))
+
     return {
       name: repo.name,
       commits: repoCommits,
       additions: repoCommits * 38,
       deletions: repoCommits * 14,
       progress,
-      lastActivity: repo.pushed_at
+      lastActivity: repo.pushed_at,
     }
   })
 
-  const activityFeed: ActivityFeedItem[] = events.slice(0, 20).map((event) => {
+  const activityFeed: ActivityFeedItem[] = events.slice(0, 20).map((event: any) => {
     let type: ActivityFeedItem['type'] = 'commit'
     let message = ''
     let details = ''
+
     switch (event.type) {
       case 'PushEvent':
         type = 'push'
-        message = `Pushed ${event.payload.size} commit${event.payload.size === 1 ? '' : 's'} to ${event.repo.name}`
-        details = event.payload.commits?.[0]?.message || ''
+        message = `Pushed ${event.payload?.size || 0} commit${
+          event.payload?.size === 1 ? '' : 's'
+        } to ${event.repo?.name}`
+        details = event.payload?.commits?.[0]?.message || ''
         break
+
       case 'CreateEvent':
         type = 'create'
-        message = `Created ${event.payload.ref_type || 'repository'} ${event.payload.ref || ''} in ${event.repo.name}`
+        message = `Created ${event.payload?.ref_type || 'repository'} ${
+          event.payload?.ref || ''
+        } in ${event.repo?.name}`
         break
+
       case 'PullRequestEvent':
         type = 'pull_request'
-        message = `Opened a pull request in ${event.repo.name}`
+        message = `Opened a pull request in ${event.repo?.name}`
         break
+
       case 'IssuesEvent':
         type = 'issue'
-        message = `Opened an issue in ${event.repo.name}`
+        message = `Opened an issue in ${event.repo?.name}`
         break
+
       case 'WatchEvent':
         type = 'star'
-        message = `Starred ${event.repo.name}`
+        message = `Starred ${event.repo?.name}`
         break
+
       case 'ForkEvent':
         type = 'fork'
-        message = `Forked ${event.repo.name}`
+        message = `Forked ${event.repo?.name}`
         break
+
       default:
-        message = `${event.type.replace('Event', '')} in ${event.repo.name}`
+        message = `${event.type?.replace('Event', '')} in ${event.repo?.name}`
     }
+
     return {
       id: event.id,
       type,
       message,
-      repo: event.repo.name,
+      repo: event.repo?.name,
       timestamp: event.created_at,
-      avatar: event.actor.avatar_url,
-      details
+      avatar: event.actor?.avatar_url,
+      details,
     }
   })
 
@@ -258,6 +297,6 @@ export async function fetchDashboardData(username: string, token?: string): Prom
     contributions,
     projects,
     activityFeed,
-    topRepos
+    topRepos,
   }
 }

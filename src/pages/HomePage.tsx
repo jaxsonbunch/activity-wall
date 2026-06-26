@@ -8,7 +8,6 @@ interface HomePageProps {
 const COLOR = {
   pageBg: '#1b1b1e',
   cardBg: '#242428',
-  cardBgAlt: '#2a2a2f',
   border: '#34343a',
   textPrimary: '#f4f4f5',
   textSecondary: '#b6b6bd',
@@ -89,23 +88,23 @@ export default function HomePage({ onUsernameSubmit }: HomePageProps) {
       }`}
       style={{ backgroundColor: COLOR.pageBg }}
     >
-      <div className="w-full max-w-md px-6">
+      <div className="w-full max-w-2xl px-6">
         <div
-          className="rounded-2xl p-6"
+          className="rounded-3xl p-10 shadow-2xl"
           style={{
-            backgroundColor: 'rgba(36,36,40,0.72)',
+            backgroundColor: 'rgba(36,36,40,0.75)',
             border: `1px solid ${COLOR.border}`,
           }}
         >
-          <div className="flex items-center gap-3 mb-6">
-            <img src="/logo.png" alt="logo" className="w-6 h-6 rounded" />
-            <span className="text-lg font-bold" style={{ color: COLOR.textPrimary }}>
+          <div className="flex items-center gap-3 mb-8">
+            <img src="/logo.png" alt="logo" className="w-7 h-7 rounded" />
+            <span className="text-xl font-bold" style={{ color: COLOR.textPrimary }}>
               Activity Wall
             </span>
           </div>
 
           <h1
-            className="text-3xl font-extrabold leading-tight tracking-tight"
+            className="text-4xl font-extrabold leading-tight tracking-tight"
             style={{ color: COLOR.textPrimary }}
           >
             Your coding activity,
@@ -113,17 +112,17 @@ export default function HomePage({ onUsernameSubmit }: HomePageProps) {
             all in <span style={{ color: COLOR.accent }}>one place</span>
           </h1>
 
-          <p className="mt-3 text-sm leading-relaxed" style={{ color: COLOR.textSecondary }}>
-            Connect GitHub to view commits, repositories, languages, and contribution history.
+          <p className="mt-4 text-base leading-relaxed" style={{ color: COLOR.textSecondary }}>
+            Connect GitHub to see commits, repositories, languages, and contribution history in a clean dashboard.
           </p>
 
           <button
             onClick={loginWithGitHub}
             disabled={loading}
-            className="mt-6 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="mt-8 w-full flex items-center justify-center gap-2 px-5 py-4 rounded-2xl font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
             style={{
               backgroundColor: COLOR.accentSoft,
-              color: COLOR.accent,
+              color: '#ffffff',
               border: `1px solid rgba(230,57,70,0.35)`,
             }}
             onMouseEnter={(e) => {
@@ -134,22 +133,24 @@ export default function HomePage({ onUsernameSubmit }: HomePageProps) {
             }}
           >
             <img src="/GitHub.png" alt="GitHub" className="w-5 h-5" />
-            {loading ? 'Connecting...' : 'Login with GitHub'}
-            {!loading && <ArrowRight className="w-4 h-4" />}
+            <span className="text-white font-semibold">
+              {loading ? 'Connecting...' : 'Login with GitHub'}
+            </span>
+            {!loading && <ArrowRight className="w-5 h-5 text-white" />}
           </button>
 
           {error && (
-            <p className="mt-4 text-sm text-center" style={{ color: COLOR.accent }}>
+            <p className="mt-5 text-sm text-center" style={{ color: COLOR.accent }}>
               {error}
             </p>
           )}
 
-          <div className="mt-5 text-center">
+          <div className="mt-6 text-center">
             <a
               href="https://github.com/wasteofwifi/activity-wall"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-medium hover:underline"
+              className="text-sm hover:underline"
               style={{ color: COLOR.textMuted }}
             >
               View source code

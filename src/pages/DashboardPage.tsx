@@ -14,6 +14,8 @@ import {
   FilePlus2,
   CircleAlert,
   ArrowUpRight,
+  ArrowUp,
+  ArrowDown,
   LogOut,
   Star,
   GitFork,
@@ -23,7 +25,6 @@ import type {
   GitHubUser,
   DashboardStats,
   LanguageStat,
-  WeeklyActivity,
   ContributionDay,
   ProjectActivity,
   ActivityFeedItem,
@@ -132,6 +133,33 @@ function isWithinRange(iso: string, range: TimeRange): boolean {
   return new Date(iso).getTime() >= cutoff
 }
 
+function isWithinPriorRange(iso: string, range: TimeRange): boolean {
+  const days = RANGE_DAYS[range]
+  if (days === null) return false
+  const now = Date.now()
+  const periodMs = days * 24 * 60 * 60 * 1000
+  const time = new Date(iso).getTime()
+  return time >= now - periodMs * 2 && time < now - periodMs
+}
+
+function buildDailySeries(timestamps: string[], range: TimeRange): number[] {
+  const days = range === 'monthly' ? 30 : 7
+  const buckets = new Array(days).fill(0)
+  const now = Date.now()
+  const dayMs = 24 * 60 * 60 * 1000
+  for (const iso of timestamps) {
+    const time = new Date(iso).getTime()
+    const dayIndex = days - 1 - Math.floor((now - time) / dayMs)
+    if (dayIndex >= 0 && dayIndex < days) buckets[dayIndex] += 1
+  }
+  return buckets
+}
+
+function percentChange(current: number, prior: number): number | null {
+  if (prior === 0) return current === 0 ? 0 : null
+  return Math.round(((current - prior) / prior) * 100)
+}
+
 function describeFeedTag(item: ActivityFeedItem, repos: GitHubRepo[]): string {
   const repo = repos.find((r) => r.full_name === item.repo || r.name === item.repo)
   if (repo?.language && TAG_BY_LANGUAGE[repo.language]) return TAG_BY_LANGUAGE[repo.language]
@@ -158,9 +186,9 @@ function tagClasses(tag: string): string {
   }
 }
 
-function Sparkline({ points }: { points: number[] }) {
+function TrendChart({ points, direction }: { points: number[]; direction: 'up' | 'down' | 'flat' }) {
   const width = 120
-  const height = 24
+  const height = 28
   const max = Math.max(...points, 1)
   const min = Math.min(...points, 0)
   const range = max - min || 1
@@ -172,10 +200,50 @@ function Sparkline({ points }: { points: number[] }) {
       return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`
     })
     .join(' ')
+  const lineColor = direction === 'up' ? '#4ade80' : direction === 'down' ? '#f87171' : COLOR.textMuted
+  const fillId = `trend-fill-${direction}`
+  const last = points[points.length - 1] ?? 0
+  const lastX = (points.length - 1) * step
+  const lastY = height - ((last - min) / range) * (height - 6) - 3
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-6" preserveAspectRatio="none">
-      <path d={path} fill="none" stroke={COLOR.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-7" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={lineColor} stopOpacity="0.25" />
+          <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={`${path} L${width},${height} L0,${height} Z`} fill={`url(#${fillId})`} stroke="none" />
+      <path d={path} fill="none" stroke={lineColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={lastX} cy={lastY} r="2.5" fill={lineColor} />
     </svg>
+  )
+}
+
+function ChangeBadge({ percent }: { percent: number | null }) {
+  if (percent === null) {
+    return (
+      <span className="flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded-full" style={{ color: '#4ade80', backgroundColor: 'rgba(74,222,128,0.14)' }}>
+        New
+      </span>
+    )
+  }
+  if (percent === 0) {
+    return (
+      <span className="flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded-full" style={{ color: COLOR.textMuted, backgroundColor: COLOR.cardBgAlt }}>
+        No change
+      </span>
+    )
+  }
+  const positive = percent > 0
+  const Icon = positive ? ArrowUp : ArrowDown
+  const color = positive ? '#4ade80' : '#f87171'
+  const bg = positive ? 'rgba(74,222,128,0.14)' : 'rgba(248,113,113,0.14)'
+  return (
+    <span className="flex items-center gap-0.5 text-[11px] font-semibold px-1.5 py-0.5 rounded-full" style={{ color, backgroundColor: bg }}>
+      <Icon className="w-3 h-3" />
+      {Math.abs(percent)}%
+    </span>
   )
 }
 
@@ -184,12 +252,18 @@ function StatCard({
   value,
   isPerfect,
   trend,
+  changePercent,
+  showTrend,
 }: {
   label: string
   value: string
   isPerfect?: boolean
   trend: number[]
+  changePercent: number | null
+  showTrend: boolean
 }) {
+  const direction: 'up' | 'down' | 'flat' =
+    changePercent === null || changePercent === 0 ? 'flat' : changePercent > 0 ? 'up' : 'down'
   return (
     <div
       className="rounded-2xl px-4 py-3.5 backdrop-blur-xl"
@@ -201,15 +275,19 @@ function StatCard({
       <span className="text-[13px]" style={{ color: COLOR.textMuted }}>{label}</span>
       <div className="flex items-baseline justify-between mt-1.5">
         <span className="text-2xl leading-none font-bold" style={{ color: COLOR.textPrimary }}>{value}</span>
-        {isPerfect && (
+        {isPerfect ? (
           <span className="flex items-center gap-1 text-xs font-semibold" style={{ color: COLOR.accent }}>
             Perfect!
           </span>
-        )}
+        ) : showTrend ? (
+          <ChangeBadge percent={changePercent} />
+        ) : null}
       </div>
-      <div className="mt-2.5">
-        <Sparkline points={trend} />
-      </div>
+      {showTrend && (
+        <div className="mt-2.5">
+          <TrendChart points={trend} direction={direction} />
+        </div>
+      )}
     </div>
   )
 }
@@ -356,7 +434,6 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
   const [user, setUser] = useState<GitHubUser | null>(null)
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [languages, setLanguages] = useState<LanguageStat[]>([])
-  const [weeklyActivity, setWeeklyActivity] = useState<WeeklyActivity[]>([])
   const [contributions, setContributions] = useState<ContributionDay[]>([])
   const [projects, setProjects] = useState<ProjectActivity[]>([])
   const [activityFeed, setActivityFeed] = useState<ActivityFeedItem[]>([])
@@ -378,7 +455,6 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
       setUser(data.user)
       setStats(data.stats)
       setLanguages(data.languages)
-      setWeeklyActivity(data.weeklyActivity)
       setContributions(data.contributions)
       setProjects(data.projects)
       setActivityFeed(data.activityFeed)
@@ -454,6 +530,84 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
     const filtered = topRepos.filter((repo) => activeNames.has(repo.full_name) || activeNames.has(repo.name))
     return filtered.length > 0 ? filtered : topRepos
   }, [topRepos, rangedFeed, timeRange])
+
+  const priorRangedFeed = useMemo(
+    () => activityFeed.filter((item) => isWithinPriorRange(item.timestamp, timeRange)),
+    [activityFeed, timeRange],
+  )
+
+  const isCommitLike = (item: ActivityFeedItem) => item.type === 'commit' || item.type === 'push'
+
+  const rangedCommitCount = useMemo(
+    () => (timeRange === 'all' ? stats?.totalCommits ?? 0 : rangedFeed.filter(isCommitLike).length),
+    [rangedFeed, timeRange, stats],
+  )
+
+  const priorCommitCount = useMemo(() => priorRangedFeed.filter(isCommitLike).length, [priorRangedFeed])
+
+  const commitChangePercent = useMemo(
+    () => (timeRange === 'all' ? null : percentChange(rangedCommitCount, priorCommitCount)),
+    [rangedCommitCount, priorCommitCount, timeRange],
+  )
+
+  const commitSeries = useMemo(
+    () => buildDailySeries(rangedFeed.filter(isCommitLike).map((item) => item.timestamp), timeRange),
+    [rangedFeed, timeRange],
+  )
+
+  const rangedActiveProjectCount = useMemo(
+    () => new Set(rangedFeed.map((item) => item.repo)).size,
+    [rangedFeed],
+  )
+
+  const priorActiveProjectCount = useMemo(
+    () => new Set(priorRangedFeed.map((item) => item.repo)).size,
+    [priorRangedFeed],
+  )
+
+  const projectChangePercent = useMemo(
+    () => (timeRange === 'all' ? null : percentChange(rangedActiveProjectCount, priorActiveProjectCount)),
+    [rangedActiveProjectCount, priorActiveProjectCount, timeRange],
+  )
+
+  const projectSeries = useMemo(() => {
+    const days = timeRange === 'monthly' ? 30 : 7
+    const seen = new Array(days).fill(null).map(() => new Set<string>())
+    const now = Date.now()
+    const dayMs = 24 * 60 * 60 * 1000
+    for (const item of rangedFeed) {
+      const dayIndex = days - 1 - Math.floor((now - new Date(item.timestamp).getTime()) / dayMs)
+      if (dayIndex >= 0 && dayIndex < days) seen[dayIndex].add(item.repo)
+    }
+    return seen.map((set) => set.size)
+  }, [rangedFeed, timeRange])
+
+  const rangedActiveDayCount = useMemo(() => {
+    const days = new Set(rangedFeed.map((item) => new Date(item.timestamp).toDateString()))
+    return days.size
+  }, [rangedFeed])
+
+  const priorActiveDayCount = useMemo(() => {
+    const days = new Set(priorRangedFeed.map((item) => new Date(item.timestamp).toDateString()))
+    return days.size
+  }, [priorRangedFeed])
+
+  const activeDayChangePercent = useMemo(
+    () => (timeRange === 'all' ? null : percentChange(rangedActiveDayCount, priorActiveDayCount)),
+    [rangedActiveDayCount, priorActiveDayCount, timeRange],
+  )
+
+  const activeDaySeries = useMemo(() => {
+    const days = timeRange === 'monthly' ? 30 : 7
+    const buckets = new Array(days).fill(0)
+    const now = Date.now()
+    const dayMs = 24 * 60 * 60 * 1000
+    for (const item of rangedFeed) {
+      const dayIndex = days - 1 - Math.floor((now - new Date(item.timestamp).getTime()) / dayMs)
+      if (dayIndex >= 0 && dayIndex < days) buckets[dayIndex] = 1
+    }
+    return buckets
+  }, [rangedFeed, timeRange])
 
   const rangeNoun = timeRange === 'weekly' ? "this week's" : timeRange === 'monthly' ? "this month's" : 'all-time'
   const overviewSubtitle = `Your coding activity, ${timeRange === 'all' ? 'all in one place' : `over ${rangeNoun.replace("'s", '')}`}.`
@@ -565,7 +719,7 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
       </aside>
       <div className="flex-1 flex flex-col overflow-hidden">
         <div ref={contentRef} className="flex-1 overflow-y-auto">
-          <div className={`px-7 pt-6 pb-5 flex items-start justify-between gap-4 ${motionClass}`}>
+          <div className={`relative z-30 px-7 pt-6 pb-5 flex items-start justify-between gap-4 ${motionClass}`}>
             <div>
               <h1 className="text-2xl font-bold" style={{ color: COLOR.textPrimary }}>
                 Dashboard
@@ -588,25 +742,33 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
                   {stats && (
                     <>
                       <StatCard
-                        label="Commits (all time)"
-                        value={formatNumber(stats.totalCommits)}
-                        trend={weeklyActivity.map((d) => d.commits)}
+                        label="Commits"
+                        value={formatNumber(rangedCommitCount)}
+                        trend={commitSeries}
+                        changePercent={commitChangePercent}
+                        showTrend={timeRange !== 'all'}
                       />
                       <StatCard
                         label="Projects"
-                        value={formatNumber(stats.totalProjects)}
-                        trend={rangedProjects.map((p) => p.commits).reverse()}
+                        value={formatNumber(rangedActiveProjectCount)}
+                        trend={projectSeries}
+                        changePercent={projectChangePercent}
+                        showTrend={timeRange !== 'all'}
                       />
                       <StatCard
                         label="Active Days"
-                        value={formatNumber(stats.activeDays)}
-                        isPerfect={stats.activeDays >= 7}
-                        trend={weeklyActivity.map((d) => (d.commits > 0 ? 1 : 0))}
+                        value={formatNumber(rangedActiveDayCount)}
+                        isPerfect={timeRange === 'weekly' && rangedActiveDayCount >= 7}
+                        trend={activeDaySeries}
+                        changePercent={activeDayChangePercent}
+                        showTrend={timeRange !== 'all'}
                       />
                       <StatCard
                         label="Lines Changed"
                         value={formatNumber(stats.linesAdded + stats.linesDeleted)}
-                        trend={weeklyActivity.map((d) => d.additions + d.deletions)}
+                        trend={commitSeries}
+                        changePercent={null}
+                        showTrend={false}
                       />
                     </>
                   )}

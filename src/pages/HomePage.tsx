@@ -1,24 +1,27 @@
-import { ArrowRight } from 'lucide-react'
-
 const COLOR = {
   pageBg: '#17171a',
-  cardBg: 'rgba(36, 36, 40, 0.75)',
-  border: '#34343a',
   textPrimary: '#f4f4f5',
   textMuted: '#a1a1aa',
   accent: '#e63946',
-  accentHover: '#d62839',
 }
 
 export default function HomePage() {
   const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID
+
   const loginWithGitHub = () => {
-    const redirectUri = 'https://activity-wall.netlify.app/.netlify/functions/github-callback'
+    if (!clientId) return
+
+    const redirectUri =
+      'https://activity-wall.netlify.app/.netlify/functions/github-callback'
+
     const scope = 'read:user repo'
-    const url = `https://github.com/login/oauth/authorize` +
+
+    const url =
+      'https://github.com/login/oauth/authorize' +
       `?client_id=${clientId}` +
       `&redirect_uri=${encodeURIComponent(redirectUri)}` +
       `&scope=${encodeURIComponent(scope)}`
+
     window.location.href = url
   }
 
@@ -28,10 +31,14 @@ export default function HomePage() {
       style={{ backgroundColor: COLOR.pageBg }}
     >
       <div className="flex justify-between items-center py-6 max-w-6xl mx-auto w-full">
-        <div className="flex items-center gap-3 text-lg font-semibold" style={{ color: COLOR.textPrimary }}>
+        <div
+          className="flex items-center gap-3 text-lg font-semibold"
+          style={{ color: COLOR.textPrimary }}
+        >
           <img src="/logo.png" alt="Logo" className="w-6 h-6" />
           Activity Wall
         </div>
+
         <a
           href="https://github.com/wasteofwifi/activity-wall"
           target="_blank"
@@ -52,8 +59,12 @@ export default function HomePage() {
           >
             Your GitHub activity,
             <br />
-            rebuilt into a <span style={{ color: COLOR.accent }}>clean dashboard</span>
+            rebuilt into a{' '}
+            <span style={{ color: COLOR.accent }}>
+              clean dashboard
+            </span>
           </h1>
+
           <p className="mt-5 text-lg" style={{ color: COLOR.textMuted }}>
             A minimal way to explore commits, languages, and contribution history
             without the clutter.

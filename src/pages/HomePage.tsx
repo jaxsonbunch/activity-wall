@@ -5,10 +5,10 @@ const COLOR = {
   accent: '#e63946',
 }
 
-export default function HomePage() {
-  const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID
+export default function HomePage(): JSX.Element {
+  const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID as string | undefined
 
-  const loginWithGitHub = () => {
+  const loginWithGitHub = (): void => {
     if (!clientId) return
 
     const redirectUri =
@@ -43,7 +43,7 @@ export default function HomePage() {
           href="https://github.com/wasteofwifi/activity-wall"
           target="_blank"
           rel="noreferrer"
-          className="flex items-center gap-2 text-sm"
+          className="flex items-center gap-2 text-sm font-bold"
           style={{ color: '#ffffff' }}
         >
           <img src="/GitHub.png" alt="GitHub" className="w-4 h-4" />
@@ -51,7 +51,7 @@ export default function HomePage() {
         </a>
       </div>
 
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 flex items-start justify-center pt-16">
         <div className="max-w-3xl w-full text-center">
           <h1
             className="text-5xl font-bold tracking-tight"
@@ -84,6 +84,11 @@ export default function HomePage() {
             </button>
           </div>
         </div>
+      </div>
+
+      <div className="py-6 text-center text-sm" style={{ color: COLOR.textMuted }}>
+        <div>by taz</div>
+        <div>MIT License</div>
       </div>
     </div>
   )

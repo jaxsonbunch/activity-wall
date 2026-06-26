@@ -1,6 +1,6 @@
 import type { Handler } from "@netlify/functions"
 
-const CLIENT_ID = process.env.VITE_GITHUB_CLIENT_ID!
+const CLIENT_ID = process.env.GITHUB_CLIENT_ID!
 const CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET!
 
 export const handler: Handler = async (event) => {

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowRight, Github, ExternalLink } from 'lucide-react'
+import { ArrowRight, Github } from 'lucide-react'
 
 interface HomePageProps {
   onUsernameSubmit: (username: string) => void
@@ -75,10 +75,7 @@ export default function HomePage({ onUsernameSubmit }: HomePageProps) {
             rebuilt into a <span style={{ color: COLOR.accent }}>clean dashboard</span>
           </h1>
 
-          <p
-            className="mt-5 text-lg"
-            style={{ color: COLOR.textMuted }}
-          >
+          <p className="mt-5 text-lg" style={{ color: COLOR.textMuted }}>
             A minimal way to explore commits, languages, and contribution history
             without the clutter.
           </p>
@@ -108,7 +105,7 @@ export default function HomePage({ onUsernameSubmit }: HomePageProps) {
             </span>
           </div>
 
-          {/* Optional username input (still subtle, not primary UI) */}
+          {/* Optional username input */}
           <div
             className="mt-10 mx-auto max-w-md rounded-2xl p-5"
             style={{

@@ -1,4 +1,8 @@
-export default function HomePage() {
+interface HomePageProps {
+  onUsernameSubmit: (name: string) => void
+}
+
+export default function HomePage(_: HomePageProps) {
   return (
     <div
       className="min-h-screen flex items-center justify-center px-6"

@@ -60,9 +60,7 @@ export default function HomePage() {
             Your GitHub activity,
             <br />
             rebuilt into a{' '}
-            <span style={{ color: COLOR.accent }}>
-              clean dashboard
-            </span>
+            <span style={{ color: COLOR.accent }}>clean dashboard</span>
           </h1>
 
           <p className="mt-5 text-lg" style={{ color: COLOR.textMuted }}>
@@ -86,9 +84,35 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="py-6 text-center text-sm" style={{ color: COLOR.textMuted }}>
-        <div>by taz</div>
-        <div>MIT License</div>
+      <div
+        className="py-6 text-center text-sm flex items-center justify-center gap-3 flex-wrap"
+        style={{ color: COLOR.textMuted }}
+      >
+        <span>©</span>
+
+        <span>Made by</span>
+
+        <a
+          href="https://github.com/wasteofwifi"
+          target="_blank"
+          rel="noreferrer"
+          className="font-medium hover:text-white transition"
+        >
+          taz
+        </a>
+
+        <span>•</span>
+
+        <span>Licensed under</span>
+
+        <a
+          href="https://github.com/wasteofwifi/activity-wall/blob/main/LICENSE"
+          target="_blank"
+          rel="noreferrer"
+          className="font-medium hover:text-white transition"
+        >
+          MIT License
+        </a>
       </div>
     </div>
   )

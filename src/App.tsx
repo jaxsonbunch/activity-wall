@@ -4,7 +4,9 @@ import HomePage from './pages/HomePage'
 import DashboardPage from './pages/DashboardPage'
 
 export default function App() {
-  const [username, setUsername] = useState<string | null>(() => localStorage.getItem('paw_username'))
+  const [username, setUsername] = useState<string | null>(
+    () => localStorage.getItem('paw_username')
+  )
 
   useEffect(() => {
     if (username) {
@@ -24,29 +26,28 @@ export default function App() {
   return (
     <Router>
       <Routes>
-        <Route 
-          path="/" 
+        <Route
+          path="/"
           element={
             username ? (
               <Navigate to="/dashboard" replace />
             ) : (
-              <HomePage onUsernameSubmit={handleUsernameSubmit} />
+              <HomePage />
             )
-          } 
+          }
         />
-        
-        <Route 
-          path="/dashboard" 
+
+        <Route
+          path="/dashboard"
           element={
             username ? (
               <DashboardPage username={username} onLogout={handleLogout} />
             ) : (
               <Navigate to="/" replace />
             )
-          } 
+          }
         />
 
-        {/* Catch all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

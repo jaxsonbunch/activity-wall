@@ -20,7 +20,7 @@ const COLOR = {
 }
 
 const CLIENT_ID = 'Ov23li3u9hRItUeGGHCh'
-const REDIRECT_URI = window.location.origin
+const REDIRECT_URI = typeof window !== 'undefined' ? window.location.origin : ''
 
 export default function HomePage({ onUsernameSubmit }: HomePageProps) {
   const [loading, setLoading] = useState(false)
@@ -34,6 +34,7 @@ export default function HomePage({ onUsernameSubmit }: HomePageProps) {
     if (code) {
       handleGitHubCallback(code)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleGitHubCallback = async (code: string) => {
@@ -44,27 +45,31 @@ export default function HomePage({ onUsernameSubmit }: HomePageProps) {
       const clientSecret = (import.meta as any).env.VITE_GITHUB_CLIENT_SECRET
 
       if (!clientSecret) {
-        throw new Error('GitHub client secret is not configured.')
+        throw new Error('Missing GitHub client secret')
       }
 
-      const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          client_id: CLIENT_ID,
-          client_secret: clientSecret,
-          code,
-          redirect_uri: REDIRECT_URI,
-        }),
-      })
+      // ✅ FIX: GitHub expects x-www-form-urlencoded, NOT JSON
+      const tokenResponse = await fetch(
+        'https://github.com/login/oauth/access_token',
+        {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            client_id: CLIENT_ID,
+            client_secret: clientSecret,
+            code,
+            redirect_uri: REDIRECT_URI,
+          }),
+        }
+      )
 
       const tokenData = await tokenResponse.json()
 
       if (tokenData.error) {
-        throw new Error(tokenData.error_description || 'Failed to get access token')
+        throw new Error(tokenData.error_description || 'OAuth failed')
       }
 
       const accessToken = tokenData.access_token
@@ -77,50 +82,75 @@ export default function HomePage({ onUsernameSubmit }: HomePageProps) {
       })
 
       if (!userResponse.ok) {
-        throw new Error('Failed to fetch user information')
+        throw new Error('Failed to fetch GitHub user')
       }
 
       const user = await userResponse.json()
 
       setLeaving(true)
+
       setTimeout(() => {
         onUsernameSubmit(user.login, accessToken)
-      }, 280)
+      }, 250)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Authentication failed. Please try again.')
+      setError(
+        err instanceof Error ? err.message : 'Authentication failed'
+      )
       setLoading(false)
-      window.history.replaceState({}, document.title, window.location.pathname)
+
+      window.history.replaceState(
+        {},
+        document.title,
+        window.location.pathname
+      )
     }
   }
 
   const loginWithGitHub = () => {
-    const authUrl = `https://github.com/login/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=read:user%20repo`
+    const authUrl =
+      `https://github.com/login/oauth/authorize` +
+      `?client_id=${CLIENT_ID}` +
+      `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
+      `&scope=read:user repo`
+
     window.location.href = authUrl
   }
 
   return (
     <div
-      className={`min-h-screen w-full transition-opacity duration-300 ${leaving ? 'opacity-0' : 'opacity-100'}`}
-      style={{ backgroundColor: '#242428' }}
+      className={`min-h-screen w-full transition-opacity duration-300 ${
+        leaving ? 'opacity-0' : 'opacity-100'
+      }`}
+      style={{ backgroundColor: COLOR.cardBg }}
     >
       <div className="max-w-3xl mx-auto px-8 sm:px-12 lg:px-16 py-8 flex items-center min-h-screen">
         <div className="w-full relative z-10 animate-rise">
           <div className="flex items-center gap-3 mb-8">
             <img src="/logo.png" alt="Activity Wall" className="w-6 h-6" />
-            <span className="font-bold text-xl tracking-tight" style={{ color: COLOR.textPrimary }}>
+            <span
+              className="font-bold text-xl tracking-tight"
+              style={{ color: COLOR.textPrimary }}
+            >
               Activity Wall
             </span>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl font-extrabold leading-[1.05] tracking-tighter" style={{ color: COLOR.textPrimary }}>
+          <h1
+            className="text-4xl sm:text-5xl font-extrabold leading-[1.05] tracking-tighter"
+            style={{ color: COLOR.textPrimary }}
+          >
             Your coding activity,
             <br />
-            all in <span style={{ color: COLOR.accent }}>one place</span>
+            all in{' '}
+            <span style={{ color: COLOR.accent }}>one place</span>
           </h1>
 
-          <p className="mt-6 text-[16px] leading-relaxed" style={{ color: COLOR.textSecondary }}>
-            Connect your GitHub account to see commits, languages, contribution streaks,<br />
-            private repos, and more in a beautiful dashboard.
+          <p
+            className="mt-6 text-[16px] leading-relaxed"
+            style={{ color: COLOR.textSecondary }}
+          >
+            Connect your GitHub account to see commits, languages, streaks,
+            and more in one dashboard.
           </p>
 
           <div className="mt-10">
@@ -141,7 +171,10 @@ export default function HomePage({ onUsernameSubmit }: HomePageProps) {
           </div>
 
           {error && (
-            <p className="text-sm mt-6 text-center" style={{ color: COLOR.accent }}>
+            <p
+              className="text-sm mt-6 text-center"
+              style={{ color: COLOR.accent }}
+            >
               {error}
             </p>
           )}

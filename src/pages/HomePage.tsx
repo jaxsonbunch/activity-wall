@@ -5,10 +5,10 @@ const COLOR = {
   accent: '#e63946',
 }
 
-export default function HomePage(): JSX.Element {
-  const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID as string | undefined
+export default function HomePage() {
+  const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID
 
-  const loginWithGitHub = (): void => {
+  const loginWithGitHub = () => {
     if (!clientId) return
 
     const redirectUri =
@@ -73,7 +73,7 @@ export default function HomePage(): JSX.Element {
           <div className="mt-10 flex flex-col gap-4 items-center">
             <button
               onClick={loginWithGitHub}
-              className="flex items-center justify-center gap-2 rounded-2xl px-6 py-3 font-semibold transition-all"
+              className="flex items-center justify-center gap-2 rounded-2xl px-6 py-3 font-semibold"
               style={{
                 backgroundColor: COLOR.accent,
                 color: '#fff',

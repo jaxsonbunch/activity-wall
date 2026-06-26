@@ -1,8 +1,8 @@
-import { useState } from 'react'
-import { ArrowRight } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { ArrowRight, Github } from 'lucide-react'
 
 interface HomePageProps {
-  onUsernameSubmit: (username: string) => void
+  onUsernameSubmit: (username: string, token?: string) => void
 }
 
 const COLOR = {
@@ -19,32 +19,83 @@ const COLOR = {
   accentSoft: 'rgba(230,57,70,0.14)',
 }
 
+const CLIENT_ID = 'Ov23li3u9hRItUeGGHCh'
+const REDIRECT_URI = window.location.origin
+
 export default function HomePage({ onUsernameSubmit }: HomePageProps) {
-  const [username, setUsername] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [leaving, setLeaving] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const trimmed = username.trim()
-    if (!trimmed) {
-      setError('Enter a GitHub username first.')
-      return
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const code = urlParams.get('code')
+
+    if (code) {
+      handleGitHubCallback(code)
     }
+  }, [])
+
+  const handleGitHubCallback = async (code: string) => {
     setLoading(true)
     setError('')
+
     try {
-      const response = await fetch(`https://api.github.com/users/${trimmed}`)
-      if (!response.ok) {
-        throw new Error(`We couldn't find a GitHub user called "${trimmed}".`)
+      const clientSecret = import.meta.env.VITE_GITHUB_CLIENT_SECRET
+
+      if (!clientSecret) {
+        throw new Error('GitHub client secret is not configured.')
       }
+
+      const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          client_id: CLIENT_ID,
+          client_secret: clientSecret,
+          code,
+          redirect_uri: REDIRECT_URI,
+        }),
+      })
+
+      const tokenData = await tokenResponse.json()
+
+      if (tokenData.error) {
+        throw new Error(tokenData.error_description || 'Failed to get access token')
+      }
+
+      const accessToken = tokenData.access_token
+
+      const userResponse = await fetch('https://api.github.com/user', {
+        headers: {
+          Authorization: `token ${accessToken}`,
+          'User-Agent': 'Activity-Wall',
+        },
+      })
+
+      if (!userResponse.ok) {
+        throw new Error('Failed to fetch user information')
+      }
+
+      const user = await userResponse.json()
+
       setLeaving(true)
-      window.setTimeout(() => onUsernameSubmit(trimmed), 280)
+      setTimeout(() => {
+        onUsernameSubmit(user.login, accessToken)
+      }, 280)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to reach GitHub. Try again in a moment.')
+      setError(err instanceof Error ? err.message : 'Authentication failed. Please try again.')
       setLoading(false)
+      window.history.replaceState({}, document.title, window.location.pathname)
     }
+  }
+
+  const loginWithGitHub = () => {
+    const authUrl = `https://github.com/login/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=read:user%20repo`
+    window.location.href = authUrl
   }
 
   return (
@@ -68,58 +119,32 @@ export default function HomePage({ onUsernameSubmit }: HomePageProps) {
           </h1>
 
           <p className="mt-6 text-[16px] leading-relaxed" style={{ color: COLOR.textSecondary }}>
-            See your commits, languages, contribution streaks, and more turned into a beautiful dashboard.
-            <br />
-            Type a GitHub username to get started.
+            Connect your GitHub account to see commits, languages, contribution streaks,<br />
+            private repos, and more in a beautiful dashboard.
           </p>
 
-          <form onSubmit={handleSubmit} className="mt-10">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => {
-                  setUsername(e.target.value)
-                  setError('')
-                }}
-                placeholder="Your GitHub username (e.g. wasteofwifi)"
-                disabled={loading}
-                className="flex-1 border-2 rounded-2xl px-6 py-4 text-base 
-                           focus:outline-none focus:border-[#34343a] 
-                           transition-all disabled:opacity-60"
-                style={{
-                  backgroundColor: COLOR.cardBgAlt,
-                  color: COLOR.textPrimary,
-                  borderColor: COLOR.border,
-                }}
-              />
-              <button
-                type="submit"
-                disabled={loading}
-                className="font-semibold text-base px-8 py-4 rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
-                style={{
-                  backgroundColor: COLOR.accent,
-                  color: 'white',
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = COLOR.accentHover
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = COLOR.accent
-                }}
-              >
-                {loading ? (
-                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <>
-                    View dashboard
-                    <ArrowRight className="w-5 h-5" />
-                  </>
-                )}
-              </button>
-            </div>
-            {error && <p className="text-sm mt-4" style={{ color: COLOR.accent }}>{error}</p>}
-          </form>
+          <div className="mt-10">
+            <button
+              onClick={loginWithGitHub}
+              disabled={loading}
+              className="w-full sm:w-auto font-semibold text-base px-10 py-4 rounded-2xl flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              style={{
+                backgroundColor: '#24292f',
+                color: 'white',
+                border: '1px solid #424a53',
+              }}
+            >
+              <Github className="w-5 h-5" />
+              {loading ? 'Connecting...' : 'Login with GitHub'}
+              {!loading && <ArrowRight className="w-5 h-5" />}
+            </button>
+          </div>
+
+          {error && (
+            <p className="text-sm mt-6 text-center" style={{ color: COLOR.accent }}>
+              {error}
+            </p>
+          )}
 
           <div className="mt-12">
             <a

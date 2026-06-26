@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ArrowRight, Github } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 
 interface HomePageProps {
   onUsernameSubmit: (username: string, token?: string) => void
@@ -7,13 +7,17 @@ interface HomePageProps {
 
 const COLOR = {
   pageBg: '#1b1b1e',
+
   cardBg: '#242428',
   cardBgAlt: '#2a2a2f',
+
   border: '#34343a',
   borderSoft: '#2f2f35',
+
   textPrimary: '#f4f4f5',
   textSecondary: '#b6b6bd',
   textMuted: '#85858d',
+
   accent: '#e63946',
   accentHover: '#d62839',
   accentSoft: 'rgba(230,57,70,0.14)',
@@ -31,10 +35,7 @@ export default function HomePage({ onUsernameSubmit }: HomePageProps) {
     const urlParams = new URLSearchParams(window.location.search)
     const code = urlParams.get('code')
 
-    if (code) {
-      handleGitHubCallback(code)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (code) handleGitHubCallback(code)
   }, [])
 
   const handleGitHubCallback = async (code: string) => {
@@ -48,7 +49,6 @@ export default function HomePage({ onUsernameSubmit }: HomePageProps) {
         throw new Error('Missing GitHub client secret')
       }
 
-      // ✅ FIX: GitHub expects x-www-form-urlencoded, NOT JSON
       const tokenResponse = await fetch(
         'https://github.com/login/oauth/access_token',
         {
@@ -82,7 +82,7 @@ export default function HomePage({ onUsernameSubmit }: HomePageProps) {
       })
 
       if (!userResponse.ok) {
-        throw new Error('Failed to fetch GitHub user')
+        throw new Error('Failed to fetch user')
       }
 
       const user = await userResponse.json()
@@ -91,18 +91,12 @@ export default function HomePage({ onUsernameSubmit }: HomePageProps) {
 
       setTimeout(() => {
         onUsernameSubmit(user.login, accessToken)
-      }, 250)
+      }, 220)
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Authentication failed'
-      )
+      setError(err instanceof Error ? err.message : 'Authentication failed')
       setLoading(false)
 
-      window.history.replaceState(
-        {},
-        document.title,
-        window.location.pathname
-      )
+      window.history.replaceState({}, document.title, window.location.pathname)
     }
   }
 
@@ -118,97 +112,83 @@ export default function HomePage({ onUsernameSubmit }: HomePageProps) {
 
   return (
     <div
-      className={`min-h-screen w-full transition-opacity duration-300 ${
+      className={`min-h-screen w-full flex items-center justify-center transition-opacity duration-300 ${
         leaving ? 'opacity-0' : 'opacity-100'
       }`}
-      style={{ backgroundColor: COLOR.cardBg }}
+      style={{ backgroundColor: COLOR.pageBg }}
     >
-      <div className="max-w-3xl mx-auto px-8 sm:px-12 lg:px-16 py-8 flex items-center min-h-screen">
-        <div className="w-full relative z-10 animate-rise">
-          <div className="flex items-center gap-3 mb-8">
-            <img src="/logo.png" alt="Activity Wall" className="w-6 h-6" />
-            <span
-              className="font-bold text-xl tracking-tight"
-              style={{ color: COLOR.textPrimary }}
-            >
-              Activity Wall
-            </span>
-          </div>
+      <div
+        className="w-full max-w-3xl mx-6 sm:mx-10 lg:mx-16 rounded-3xl p-10 sm:p-14 backdrop-blur-xl"
+        style={{
+          backgroundColor: 'rgba(36, 36, 40, 0.65)',
+          border: `1px solid rgba(52, 52, 58, 0.8)`,
+        }}
+      >
+        <div className="flex items-center gap-3 mb-10">
+          <img src="/logo.png" alt="Activity Wall" className="w-6 h-6" />
+          <span className="font-bold text-xl tracking-tight" style={{ color: COLOR.textPrimary }}>
+            Activity Wall
+          </span>
+        </div>
 
-          <h1
-            className="text-4xl sm:text-5xl font-extrabold leading-[1.05] tracking-tighter"
+        <h1
+          className="text-4xl sm:text-5xl font-extrabold leading-[1.05] tracking-tighter"
+          style={{ color: COLOR.textPrimary }}
+        >
+          Your coding activity,
+          <br />
+          all in <span style={{ color: COLOR.accent }}>one place</span>
+        </h1>
+
+        <p className="mt-6 text-[15px] leading-relaxed" style={{ color: COLOR.textSecondary }}>
+          Connect your GitHub account to see commits, languages, streaks, and
+          contributions in a unified dashboard.
+        </p>
+
+        <div className="mt-10">
+          <button
+            onClick={loginWithGitHub}
+            disabled={loading}
+            className="w-full sm:w-auto font-semibold text-base px-10 py-4 rounded-2xl flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            style={{
+              backgroundColor: COLOR.cardBg,
+              color: COLOR.textPrimary,
+              border: `1px solid ${COLOR.border}`,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = COLOR.cardBgAlt
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = COLOR.cardBg
+            }}
+          >
+            <img src="/github.png" alt="GitHub" className="w-5 h-5" />
+
+            {loading ? 'Connecting...' : 'Login with GitHub'}
+
+            {!loading && <ArrowRight className="w-5 h-5" />}
+          </button>
+        </div>
+
+        {error && (
+          <p className="text-sm mt-6 text-center" style={{ color: COLOR.accent }}>
+            {error}
+          </p>
+        )}
+
+        <div className="mt-10">
+          <a
+            href="https://github.com/wasteofwifi/activity-wall"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-3 text-sm font-semibold px-4 py-2 rounded-xl transition-all hover:underline"
             style={{ color: COLOR.textPrimary }}
           >
-            Your coding activity,
-            <br />
-            all in{' '}
-            <span style={{ color: COLOR.accent }}>one place</span>
-          </h1>
-
-          <p
-            className="mt-6 text-[16px] leading-relaxed"
-            style={{ color: COLOR.textSecondary }}
-          >
-            Connect your GitHub account to see commits, languages, streaks,
-            and more in one dashboard.
-          </p>
-
-          <div className="mt-10">
-            <button
-              onClick={loginWithGitHub}
-              disabled={loading}
-              className="w-full sm:w-auto font-semibold text-base px-10 py-4 rounded-2xl flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-[0.98]"
-              style={{
-                backgroundColor: '#24292f',
-                color: 'white',
-                border: '1px solid #424a53',
-              }}
-            >
-              <Github className="w-5 h-5" />
-              {loading ? 'Connecting...' : 'Login with GitHub'}
-              {!loading && <ArrowRight className="w-5 h-5" />}
-            </button>
-          </div>
-
-          {error && (
-            <p
-              className="text-sm mt-6 text-center"
-              style={{ color: COLOR.accent }}
-            >
-              {error}
-            </p>
-          )}
-
-          <div className="mt-12">
-            <a
-              href="https://github.com/wasteofwifi/activity-wall"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-3 text-base font-semibold hover:underline transition-colors rounded-xl px-5 py-3"
-              style={{ color: COLOR.textPrimary }}
-            >
-              <img src="/github.png" alt="GitHub" className="w-5 h-5" />
-              Source code
-            </a>
-          </div>
+            <img src="/github.png" alt="GitHub" className="w-5 h-5" />
+            Source code
+          </a>
         </div>
       </div>
-
-      <style>{`
-        @keyframes rise {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-rise {
-          animation: rise 0.6s cubic-bezier(0.23, 1, 0.32, 1);
-        }
-      `}</style>
     </div>
   )
 }

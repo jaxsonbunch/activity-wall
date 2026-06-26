@@ -847,7 +847,7 @@ export default function DashboardPage({ username, token, onLogout }: DashboardPa
                   <SectionCard title="Activity Feed">
                     {rangedFeed.length === 0 ? (
                       <p className="text-sm py-5 text-center" style={{ color: COLOR.textMuted }}>
-                        Nothing here yet. Activity shows up once {username} pushes, opens, or merges something public.
+                        Nothing here yet. Activity shows up once {username} pushes, opens, or merges something.
                       </p>
                     ) : (
                       <ul>
@@ -906,7 +906,7 @@ export default function DashboardPage({ username, token, onLogout }: DashboardPa
                   <div className="space-y-5">
                     <SectionCard title="Active Projects">
                       {rangedProjects.length === 0 ? (
-                        <p className="text-sm py-3 text-center" style={{ color: COLOR.textMuted }}>No repositories with recent pushes.</p>
+                        <p className="text-sm py-3 text-center" style={{ color: COLOR.textMuted }}>No repositories with recent activity.</p>
                       ) : (
                         <ul className="space-y-3">
                           {rangedProjects.map((project, idx) => {
@@ -1008,7 +1008,7 @@ export default function DashboardPage({ username, token, onLogout }: DashboardPa
                   </SectionCard>
                   <SectionCard title="Top Repositories">
                     {rangedTopRepos.length === 0 ? (
-                      <p className="text-sm py-3 text-center" style={{ color: COLOR.textMuted }}>No public repositories found.</p>
+                      <p className="text-sm py-3 text-center" style={{ color: COLOR.textMuted }}>No repositories found.</p>
                     ) : (
                       <ul className="space-y-2.5">
                         {rangedTopRepos.slice(0, 3).map((repo, idx) => {
@@ -1041,7 +1041,7 @@ export default function DashboardPage({ username, token, onLogout }: DashboardPa
               <div className={motionClass}>
                 <SectionCard title={`Timeline: ${RANGE_OPTIONS.find((o) => o.id === displayTimeRange)?.label}`}>
                   {rangedFeed.length === 0 ? (
-                    <p className="text-sm py-6 text-center" style={{ color: COLOR.textMuted }}>No public activity found for {username} in this range.</p>
+                    <p className="text-sm py-6 text-center" style={{ color: COLOR.textMuted }}>No activity found for {username} in this range.</p>
                   ) : (
                     <ul>
                       {rangedFeed.map((item, idx) => {
@@ -1084,7 +1084,7 @@ export default function DashboardPage({ username, token, onLogout }: DashboardPa
             {displaySection === 'projects' && (
               <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 ${motionClass}`}>
                 {repos.length === 0 ? (
-                  <p className="text-sm py-6 text-center col-span-full" style={{ color: COLOR.textMuted }}>No public repositories found.</p>
+                  <p className="text-sm py-6 text-center col-span-full" style={{ color: COLOR.textMuted }}>No repositories found.</p>
                 ) : (
                   repos.slice(0, 12).map((repo, idx) => {
                     const palette = badgeStyle(idx)
@@ -1144,7 +1144,7 @@ export default function DashboardPage({ username, token, onLogout }: DashboardPa
               <div className={motionClass}>
                 <SectionCard title="Contribution Calendar">
                   <p className="text-[12px] mb-4" style={{ color: COLOR.textMuted }}>
-                    Each day below shows how many contributions {username} made over the past month, counting commits, pull requests, issues, and other public GitHub activity.
+                    Each day below shows how many contributions {username} made over the past month, counting commits, pull requests, issues, and other activity.
                   </p>
                   {contributions.length === 0 ? (
                     <p className="text-sm py-6 text-center" style={{ color: COLOR.textMuted }}>No contribution data available.</p>

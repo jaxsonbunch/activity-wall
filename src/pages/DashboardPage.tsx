@@ -160,6 +160,14 @@ function percentChange(current: number, prior: number): number | null {
   return Math.round(((current - prior) / prior) * 100)
 }
 
+function parseLineDelta(details: string | undefined): number | null {
+  if (!details) return null
+  const matches = details.match(/[+\-]\s?\d+/g)
+  if (!matches) return null
+  const total = matches.reduce((sum, token) => sum + parseInt(token.replace(/\s/g, ''), 10), 0)
+  return Number.isNaN(total) ? null : Math.abs(total)
+}
+
 function describeFeedTag(item: ActivityFeedItem, repos: GitHubRepo[]): string {
   const repo = repos.find((r) => r.full_name === item.repo || r.name === item.repo)
   if (repo?.language && TAG_BY_LANGUAGE[repo.language]) return TAG_BY_LANGUAGE[repo.language]
@@ -382,13 +390,17 @@ function RangeDropdown({ value, onChange }: { value: TimeRange; onChange: (range
     <div ref={wrapperRef} className="relative inline-block">
       <button
         onClick={() => setOpen((prev) => !prev)}
-        className="flex items-center gap-1.5 text-[13px] font-medium rounded-lg px-2.5 py-1.5 transition-colors"
-        style={{ color: COLOR.textSecondary, backgroundColor: open ? COLOR.cardBg : 'transparent' }}
+        className="flex items-center gap-1.5 text-[13px] font-medium rounded-xl px-3 py-1.5 backdrop-blur-xl transition-colors"
+        style={{
+          color: COLOR.textSecondary,
+          backgroundColor: open ? COLOR.cardBg : 'rgba(36, 36, 40, 0.65)',
+          border: `1px solid rgba(52, 52, 58, 0.8)`,
+        }}
         onMouseEnter={(e) => {
           if (!open) e.currentTarget.style.backgroundColor = COLOR.cardBg
         }}
         onMouseLeave={(e) => {
-          if (!open) e.currentTarget.style.backgroundColor = 'transparent'
+          if (!open) e.currentTarget.style.backgroundColor = 'rgba(36, 36, 40, 0.65)'
         }}
       >
         {current.label}
@@ -479,11 +491,16 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
     }
   }, [loading, error])
 
+  const lastTimeRangeRef = useRef(timeRange)
+
   useEffect(() => {
-    if (activeSection === displaySection) return
+    const sectionChanged = activeSection !== displaySection
+    const rangeChanged = timeRange !== lastTimeRangeRef.current
+    if (!sectionChanged && !rangeChanged) return
     setPhase('leaving')
     const timeout = setTimeout(() => {
       setDisplaySection(activeSection)
+      lastTimeRangeRef.current = timeRange
       setPhase('entering')
       requestAnimationFrame(() => setPhase('settled'))
       if (contentRef.current) {
@@ -491,7 +508,7 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
       }
     }, 180)
     return () => clearTimeout(timeout)
-  }, [activeSection, displaySection])
+  }, [activeSection, displaySection, timeRange])
 
   const heatmapWeeks = useMemo(() => {
     const weeks: ContributionDay[][] = []
@@ -609,6 +626,46 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
     return buckets
   }, [rangedFeed, timeRange])
 
+  const rangedLineDeltas = useMemo(
+    () => rangedFeed.filter(isCommitLike).map((item) => parseLineDelta(item.details)),
+    [rangedFeed],
+  )
+
+  const hasLineData = useMemo(() => rangedLineDeltas.some((delta) => delta !== null), [rangedLineDeltas])
+
+  const rangedLinesChanged = useMemo(() => {
+    if (timeRange === 'all') return (stats?.linesAdded ?? 0) + (stats?.linesDeleted ?? 0)
+    return rangedLineDeltas.reduce<number>((sum, delta) => sum + (delta ?? 0), 0)
+  }, [timeRange, stats, rangedLineDeltas])
+
+  const priorLinesChanged = useMemo(
+    () =>
+      priorRangedFeed
+        .filter(isCommitLike)
+        .map((item) => parseLineDelta(item.details))
+        .reduce<number>((sum, delta) => sum + (delta ?? 0), 0),
+    [priorRangedFeed],
+  )
+
+  const lineChangePercent = useMemo(
+    () => (timeRange === 'all' || !hasLineData ? null : percentChange(rangedLinesChanged, priorLinesChanged)),
+    [rangedLinesChanged, priorLinesChanged, timeRange, hasLineData],
+  )
+
+  const lineSeries = useMemo(() => {
+    const days = timeRange === 'monthly' ? 30 : 7
+    const buckets = new Array(days).fill(0)
+    const now = Date.now()
+    const dayMs = 24 * 60 * 60 * 1000
+    for (const item of rangedFeed.filter(isCommitLike)) {
+      const delta = parseLineDelta(item.details)
+      if (delta === null) continue
+      const dayIndex = days - 1 - Math.floor((now - new Date(item.timestamp).getTime()) / dayMs)
+      if (dayIndex >= 0 && dayIndex < days) buckets[dayIndex] += delta
+    }
+    return buckets
+  }, [rangedFeed, timeRange])
+
   const rangeNoun = timeRange === 'weekly' ? "this week's" : timeRange === 'monthly' ? "this month's" : 'all-time'
   const overviewSubtitle = `Your coding activity, ${timeRange === 'all' ? 'all in one place' : `over ${rangeNoun.replace("'s", '')}`}.`
 
@@ -719,13 +776,13 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
       </aside>
       <div className="flex-1 flex flex-col overflow-hidden">
         <div ref={contentRef} className="flex-1 overflow-y-auto">
-          <div className={`relative z-30 px-7 pt-6 pb-5 flex items-start justify-between gap-4 ${motionClass}`}>
+          <div className="relative z-30 px-7 pt-6 pb-5 flex items-start justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold" style={{ color: COLOR.textPrimary }}>
+              <h1 className={`text-2xl font-bold ${motionClass}`} style={{ color: COLOR.textPrimary }}>
                 Dashboard
               </h1>
               <div className="flex items-center gap-2 mt-0.5">
-                <p className="text-[13px]" style={{ color: COLOR.textMuted }}>
+                <p className={`text-[13px] ${motionClass}`} style={{ color: COLOR.textMuted }}>
                   {displaySection === 'overview' && overviewSubtitle}
                   {displaySection === 'timeline' && `Every public event, ${rangeNoun}, newest first.`}
                   {displaySection === 'projects' && `Repositories with activity ${timeRange === 'all' ? '' : rangeNoun}.`.trim()}
@@ -765,10 +822,10 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
                       />
                       <StatCard
                         label="Lines Changed"
-                        value={formatNumber(stats.linesAdded + stats.linesDeleted)}
-                        trend={commitSeries}
-                        changePercent={null}
-                        showTrend={false}
+                        value={timeRange !== 'all' && !hasLineData ? '—' : formatNumber(rangedLinesChanged)}
+                        trend={lineSeries}
+                        changePercent={lineChangePercent}
+                        showTrend={timeRange !== 'all' && hasLineData}
                       />
                     </>
                   )}

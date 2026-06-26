@@ -33,6 +33,7 @@ import type {
 
 interface DashboardPageProps {
   username: string
+  token: string
   onLogout: () => void
 }
 
@@ -442,7 +443,7 @@ function RangeDropdown({ value, onChange }: { value: TimeRange; onChange: (range
   )
 }
 
-export default function DashboardPage({ username, onLogout }: DashboardPageProps) {
+export default function DashboardPage({ username, token, onLogout }: DashboardPageProps) {
   const [user, setUser] = useState<GitHubUser | null>(null)
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [languages, setLanguages] = useState<LanguageStat[]>([])
@@ -464,7 +465,7 @@ export default function DashboardPage({ username, onLogout }: DashboardPageProps
     setLoading(true)
     setError('')
     try {
-      const data = await fetchDashboardData(username)
+      const data = await fetchDashboardData(username, token)
       setUser(data.user)
       setStats(data.stats)
       setLanguages(data.languages)

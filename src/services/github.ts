@@ -12,13 +12,13 @@ import type {
 
 const GITHUB_API_BASE = 'https://api.github.com'
 
-async function githubFetch(path: string): Promise<Response> {
-  const response = await fetch(`${GITHUB_API_BASE}${path}`, {
-    headers: {
-      Accept: 'application/vnd.github.v3+json',
-      'User-Agent': 'Activity-Wall',
-    },
-  })
+async function githubFetch(path: string, token?: string): Promise<Response> {
+  const headers: Record<string, string> = {
+    Accept: 'application/vnd.github.v3+json',
+    'User-Agent': 'Activity-Wall',
+  }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  const response = await fetch(`${GITHUB_API_BASE}${path}`, { headers })
   if (!response.ok) {
     if (response.status === 404) {
       throw new Error('That GitHub user doesn\'t exist.')
@@ -31,18 +31,30 @@ async function githubFetch(path: string): Promise<Response> {
   return response
 }
 
-export async function getUser(username: string): Promise<GitHubUser> {
-  const response = await githubFetch(`/users/${username}`)
+export async function getUserFromToken(token: string): Promise<GitHubUser> {
+  const response = await fetch(`${GITHUB_API_BASE}/user`, {
+    headers: {
+      Accept: 'application/vnd.github.v3+json',
+      'User-Agent': 'Activity-Wall',
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  if (!response.ok) throw new Error('Failed to fetch authenticated user')
   return response.json()
 }
 
-export async function getRepos(username: string): Promise<GitHubRepo[]> {
-  const response = await githubFetch(`/users/${username}/repos?sort=updated&per_page=100`)
+export async function getUser(username: string, token?: string): Promise<GitHubUser> {
+  const response = await githubFetch(`/users/${username}`, token)
   return response.json()
 }
 
-export async function getEvents(username: string): Promise<GitHubEvent[]> {
-  const response = await githubFetch(`/users/${username}/events/public?per_page=100`)
+export async function getRepos(username: string, token?: string): Promise<GitHubRepo[]> {
+  const response = await githubFetch(`/users/${username}/repos?sort=updated&per_page=100`, token)
+  return response.json()
+}
+
+export async function getEvents(username: string, token?: string): Promise<GitHubEvent[]> {
+  const response = await githubFetch(`/users/${username}/events/public?per_page=100`, token)
   return response.json()
 }
 
@@ -85,7 +97,7 @@ export function getLanguageColor(name: string): string {
   return languageColors[name] || '#8b8b8b'
 }
 
-export async function fetchDashboardData(username: string): Promise<{
+export async function fetchDashboardData(username: string, token?: string): Promise<{
   user: GitHubUser
   repos: GitHubRepo[]
   events: GitHubEvent[]
@@ -97,7 +109,7 @@ export async function fetchDashboardData(username: string): Promise<{
   activityFeed: ActivityFeedItem[]
   topRepos: GitHubRepo[]
 }> {
-  const [user, repos, events] = await Promise.all([getUser(username), getRepos(username), getEvents(username)])
+  const [user, repos, events] = await Promise.all([getUser(username, token), getRepos(username, token), getEvents(username, token)])
 
   const topRepos = [...repos]
     .sort((a, b) => new Date(b.pushed_at).getTime() - new Date(a.pushed_at).getTime())

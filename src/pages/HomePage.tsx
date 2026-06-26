@@ -24,7 +24,7 @@ export default function HomePage() {
           <img src="/logo.png" alt="Logo" className="w-6 h-6" />
           Activity Wall
         </div>
-        
+        <a
           href="https://github.com/wasteofwifi/activity-wall"
           target="_blank"
           rel="noreferrer"
@@ -98,7 +98,7 @@ export default function HomePage() {
               Activity Wall&apos;s code is available on GitHub and anyone can
               see inside it, contribute to it, or even make their own version.
             </p>
-            
+            <a
               href="https://github.com/wasteofwifi/activity-wall"
               target="_blank"
               rel="noreferrer"
@@ -123,7 +123,7 @@ export default function HomePage() {
         style={{ color: COLOR.textMuted }}
       >
         © Made by{' '}
-        
+        <a
           href="https://github.com/wasteofwifi"
           target="_blank"
           rel="noreferrer"
@@ -133,7 +133,7 @@ export default function HomePage() {
           taz
         </a>
         {' licensed under '}
-        
+        <a
           href="https://github.com/wasteofwifi/activity-wall/blob/main/LICENSE"
           target="_blank"
           rel="noreferrer"

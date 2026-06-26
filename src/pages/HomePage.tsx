@@ -43,10 +43,6 @@ export default function HomePage({ onUsernameSubmit }: HomePageProps) {
     try {
       const clientSecret = import.meta.env.VITE_GITHUB_CLIENT_SECRET
 
-      if (!clientSecret) {
-        throw new Error('GitHub client secret is not configured.')
-      }
-
       const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
         method: 'POST',
         headers: {

@@ -14,10 +14,6 @@ export default function App() {
     }
   }, [username])
 
-  const handleUsernameSubmit = (name: string) => {
-    setUsername(name)
-  }
-
   const handleLogout = () => {
     setUsername(null)
     localStorage.removeItem('paw_username')

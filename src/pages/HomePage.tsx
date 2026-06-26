@@ -1,39 +1,79 @@
-interface HomePageProps {
-  onUsernameSubmit: (name: string) => void
+import { useState } from 'react'
+import { ArrowRight } from 'lucide-react'
+
+const COLOR = {
+  pageBg: '#17171a',
+  cardBg: 'rgba(36, 36, 40, 0.75)',
+  border: '#34343a',
+  textPrimary: '#f4f4f5',
+  textMuted: '#a1a1aa',
+  accent: '#e63946',
+  accentHover: '#d62839',
 }
 
-export default function HomePage(_: HomePageProps) {
+export default function HomePage() {
+  const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID
+  const loginWithGitHub = () => {
+    const redirectUri = 'https://activity-wall.netlify.app/.netlify/functions/github-callback'
+    const scope = 'read:user repo'
+    const url = `https://github.com/login/oauth/authorize` +
+      `?client_id=${clientId}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&scope=${encodeURIComponent(scope)}`
+    window.location.href = url
+  }
+
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-6"
-      style={{ backgroundColor: '#17171a' }}
+      className="min-h-screen px-6 flex flex-col"
+      style={{ backgroundColor: COLOR.pageBg }}
     >
-      <div
-        className="w-full max-w-2xl rounded-3xl p-12 text-center"
-        style={{
-          backgroundColor: 'rgba(36, 36, 40, 0.75)',
-          border: '1px solid #34343a',
-        }}
-      >
-        <div className="flex items-center justify-center gap-3 mb-6">
-          <img src="/logo.png" alt="logo" className="w-10 h-10" />
-          <h1 className="text-4xl font-bold text-white">Activity Wall</h1>
+      <div className="flex justify-between items-center py-6 max-w-6xl mx-auto w-full">
+        <div className="flex items-center gap-3 text-lg font-semibold" style={{ color: COLOR.textPrimary }}>
+          <img src="/logo.png" alt="Logo" className="w-6 h-6" />
+          Activity Wall
         </div>
-
-        <p className="text-gray-400 text-sm mb-10">
-          Your GitHub activity, rebuilt into a clean dashboard
-        </p>
-
-        <div className="flex justify-center mb-10">
-          <img src="/GitHub.png" alt="github" className="w-12 h-12" />
-        </div>
-
         <a
           href="https://github.com/wasteofwifi/activity-wall"
-          className="text-white text-sm"
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-2 text-sm"
+          style={{ color: '#ffffff' }}
         >
+          <img src="/GitHub.png" alt="GitHub" className="w-4 h-4" />
           GitHub Repo
         </a>
+      </div>
+
+      <div className="flex-1 flex items-center justify-center">
+        <div className="max-w-3xl w-full text-center">
+          <h1
+            className="text-5xl font-bold tracking-tight"
+            style={{ color: COLOR.textPrimary }}
+          >
+            Your GitHub activity,
+            <br />
+            rebuilt into a <span style={{ color: COLOR.accent }}>clean dashboard</span>
+          </h1>
+          <p className="mt-5 text-lg" style={{ color: COLOR.textMuted }}>
+            A minimal way to explore commits, languages, and contribution history
+            without the clutter.
+          </p>
+
+          <div className="mt-10 flex flex-col gap-4 items-center">
+            <button
+              onClick={loginWithGitHub}
+              className="flex items-center justify-center gap-2 rounded-2xl px-6 py-3 font-semibold transition-all"
+              style={{
+                backgroundColor: COLOR.accent,
+                color: '#fff',
+              }}
+            >
+              <img src="/GitHub.png" alt="GitHub" className="w-5 h-5" />
+              Continue with GitHub
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )

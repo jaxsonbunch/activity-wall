@@ -1,0 +1,132 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-color: #0a0a0f;
+  color: #f1f5f9;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+input:focus,
+button:focus,
+textarea:focus,
+select:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0a0f;
+}
+::-webkit-scrollbar-thumb {
+  background: #1f1f2e;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #dc2626;
+}
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fallOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+@keyframes dropIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scaleY(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-rise-in {
+  animation: riseIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.animate-fall-out {
+  animation: fallOut 0.22s ease-in forwards;
+}
+.animate-slide-in {
+  animation: slideIn 0.4s ease-out forwards;
+}
+.animate-pulse-slow {
+  animation: pulse 2s ease-in-out infinite;
+}
+.animate-drop-in {
+  animation: dropIn 0.16s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.7s ease-out forwards;
+}
+.animate-fade-in-delay-1 { animation-delay: 100ms; }
+.animate-fade-in-delay-2 { animation-delay: 200ms; }
+.animate-fade-in-delay-3 { animation-delay: 300ms; }
+.animate-fade-in-delay-4 { animation-delay: 400ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise-in,
+  .animate-fall-out,
+  .animate-slide-in,
+  .animate-pulse-slow,
+  .animate-drop-in,
+  .animate-fade-in,
+  .animate-fade-in-delay-1,
+  .animate-fade-in-delay-2,
+  .animate-fade-in-delay-3,
+  .animate-fade-in-delay-4 {
+    animation: none !important;
+  }
+}

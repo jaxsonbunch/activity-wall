@@ -26,7 +26,7 @@ export default function HomePage() {
           Activity Wall
         </div>
         <a
-          href="https://github.com/wasteofwifi/activity-wall"
+          href="https://github.com/jaxsonbunch/activity-wall"
           target="_blank"
           rel="noreferrer"
           className="flex items-center gap-2 text-sm font-bold"
@@ -84,7 +84,7 @@ export default function HomePage() {
               see inside it, contribute to it, or even make their own version.
             </p>
             <a
-              href="https://github.com/wasteofwifi/activity-wall"
+              href="https://github.com/jaxsonbunch/activity-wall"
               target="_blank"
               rel="noreferrer"
               className="mt-4 inline-block font-medium"
@@ -95,7 +95,7 @@ export default function HomePage() {
           </div>
           <div className="flex justify-start md:justify-end">
             <img
-              src="https://contrib.rocks/image?repo=wasteofwifi/activity-wall&max=15"
+              src="https://contrib.rocks/image?repo=jaxsonbunch/activity-wall&max=15"
               alt="Contributors"
               className="max-w-full h-auto"
             />
@@ -109,7 +109,7 @@ export default function HomePage() {
       >
         © Made by{' '}
         <a
-          href="https://github.com/wasteofwifi"
+          href="https://github.com/jaxsonbunch"
           target="_blank"
           rel="noreferrer"
           style={{ color: COLOR.accent }}
@@ -119,7 +119,7 @@ export default function HomePage() {
         </a>
         {' licensed under '}
         <a
-          href="https://github.com/wasteofwifi/activity-wall/blob/main/LICENSE"
+          href="https://github.com/jaxsonbunch/activity-wall/blob/main/LICENSE"
           target="_blank"
           rel="noreferrer"
           style={{ color: COLOR.accent }}
